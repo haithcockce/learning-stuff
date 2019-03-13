@@ -1,0 +1,1090 @@
+2018-12-10
+
+TASK 891991451
+
+[I.0] RHEL 7.5.z on Cisco hardware with no load average panicked due to a bugon.
+      Looks as if a module, likely built for the 3.10.0-123 kernel was forced in
+      despite warnings of conflicting symbols.
+
+      KERNEL: /cores/retrace/repos/kernel/x86_64/usr/lib/debug/lib/modules/3.10.0-862.9.1.el7.x86_64/vmlinux
+    DUMPFILE: /cores/retrace/tasks/891991451/crash/vmcore  [PARTIAL DUMP]
+        CPUS: 24
+        DATE: Thu Nov 15 03:51:01 2018
+      UPTIME: 10 days, 17:38:44
+LOAD AVERAGE: 0.35, 0.35, 0.37
+       TASKS: 902
+    NODENAME: bi-prd-edw.esb.com
+     RELEASE: 3.10.0-862.9.1.el7.x86_64
+     VERSION: #1 SMP Wed Jun 27 04:30:39 EDT 2018
+     MACHINE: x86_64  (2294 Mhz)
+      MEMORY: 255.7 GB
+       PANIC: "kernel BUG at mm/page_alloc.c:1450!"         <---
+         PID: 27763
+     COMMAND: "systemd-cgroups"
+        TASK: ffff9243c7e44f10  [THREAD_INFO: ffff9243bb3f4000]
+         CPU: 16
+       STATE: TASK_RUNNING (PANIC)
+
+crash> sys -i
+        DMI_BIOS_VENDOR: Cisco Systems, Inc.
+       DMI_BIOS_VERSION: B200M4.3.1.3i.0.032120171710
+          DMI_BIOS_DATE: 03/21/2017
+         DMI_SYS_VENDOR: Cisco Systems Inc
+       DMI_PRODUCT_NAME: UCSB-B200-M4
+
+crash> p tainted_mask
+tainted_mask = $1 = 0x3000
+
+crash> log
+- - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+[   13.158609] bond0: Enslaving enp12s0 as a backup interface with an up link
+[   14.114949] symev_rh_ES_7_3_10_0_123_el7_x86_64: loading out-of-tree module taints kernel.
+[   14.114955] WARNING: module 'symev_rh_ES_7_3_10_0_123_el7_x86_64' built without retpoline-enabled compi
+ler, may affect Spectre v2 mitigation
+[   14.115135] symev_rh_ES_7_3_10_0_123_el7_x86_64: module verification failed: signature and/or required
+key missing - tainting kernel
+[   14.115162] symev_rh_ES_7_3_10_0_123_el7_x86_64: disagrees about version of symbol lookup_one_len
+[   14.115164] symev_rh_ES_7_3_10_0_123_el7_x86_64: Unknown symbol lookup_one_len (err -22)
+[   14.115183] symev_rh_ES_7_3_10_0_123_el7_x86_64: disagrees about version of symbol d_lookup
+[   14.115185] symev_rh_ES_7_3_10_0_123_el7_x86_64: Unknown symbol d_lookup (err -22)
+[   14.115190] symev_rh_ES_7_3_10_0_123_el7_x86_64: disagrees about version of symbol vfs_unlink
+[   14.115192] symev_rh_ES_7_3_10_0_123_el7_x86_64: Unknown symbol vfs_unlink (err -22)
+[   14.115199] symev_rh_ES_7_3_10_0_123_el7_x86_64: disagrees about version of symbol path_put
+- - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+[51646.797504] megaraid_sas 0000:01:00.0: Firmware crash dump is not available
+[51646.797549] megaraid_sas 0000:01:00.0: Firmware crash dump is not available
+[51649.007974] WARNING! power/level is deprecated; use power/control instead
+[51692.433395] ACPI Error: No handler for Region [POWS] (ffff92645393e3f0) [IPMI] (20130517/evregion-162)
+[51692.433400] ACPI Error: Region IPMI (ID=7) has no handler (20130517/exfldio-305)
+[51692.433411] ACPI Error: Method parse/execution failed [\_SB_.M111._GAI] (Node ffff92645393fb18), AE_NOT_EXIST (20130517/psparse-536)
+[51692.433431] ACPI Exception: AE_NOT_EXIST, Evaluating _GAI (20130517/power_meter-131)
+[51692.433486] ACPI Error: No handler for Region [POWS] (ffff92645393e3f0) [IPMI] (20130517/evregion-162)
+[51692.433489] ACPI Error: Region IPMI (ID=7) has no handler (20130517/exfldio-305)
+[51692.433492] ACPI Error: Method parse/execution failed [\_SB_.M111._GAI] (Node ffff92645393fb18), AE_NOT_EXIST (20130517/psparse-536)
+[51692.433497] ACPI Exception: AE_NOT_EXIST, Evaluating _GAI (20130517/power_meter-131)
+[51692.433524] ACPI Error: No handler for Region [POWS] (ffff92645393e3f0) [IPMI] (20130517/evregion-162)
+[51692.433527] ACPI Error: Region IPMI (ID=7) has no handler (20130517/exfldio-305)
+[51692.433529] ACPI Error: Method parse/execution failed [\_SB_.M111._GAI] (Node ffff92645393fb18), AE_NOT_EXIST (20130517/psparse-536)
+- - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+[919202.778594] ACPI Exception: AE_NOT_EXIST, Evaluating _PMM (20130517/power_meter-339)
+[919202.778632] ACPI Error: No handler for Region [POWS] (ffff92645393e3f0) [IPMI] (20130517/evregion-162)
+[919202.778635] ACPI Error: Region IPMI (ID=7) has no handler (20130517/exfldio-305)
+[919202.778637] ACPI Error: Method parse/execution failed [\_SB_.M111._PMM] (Node ffff92645393fac8), AE_NOT_EXIST (20130517/psparse-536)
+[919202.778641] ACPI Exception: AE_NOT_EXIST, Evaluating _PMM (20130517/power_meter-339)
+[927599.990120] ------------[ cut here ]------------
+[927599.990160] kernel BUG at mm/page_alloc.c:1450!
+[927599.990211] invalid opcode: 0000 [#1] SMP
+- - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+[927599.991226] Hardware name: Cisco Systems Inc UCSB-B200-M4/UCSB-B200-M4, BIOS B200M4.3.1.3i.0.032120171710 03/21/2017
+[927599.991270] task: ffff9243c7e44f10 ti: ffff9243bb3f4000 task.ti: ffff9243bb3f4000
+[927599.991294] RIP: 0010:[<ffffffff9759a07e>]  [<ffffffff9759a07e>] move_freepages+0x15e/0x160
+[927599.992069] RSP: 0018:ffff9243bb3f7af8  EFLAGS: 00010087
+[927599.992791] RAX: ffff9263fffda000 RBX: ffffea8186000000 RCX: 0000000000000001
+[927599.993547] RDX: ffff9263fffd9000 RSI: 0000000000000000 RDI: ffff9263fffda000
+[927599.994299] RBP: ffff9243bb3f7b48 R08: 0000000002080000 R09: 00000000001801ff
+[927599.994980] R10: ffffea8186007fc0 R11: 0000000000000246 R12: 0000000000000001
+[927599.995679] R13: 0000000000000001 R14: ffff9263fffda0f8 R15: ffffea8186007fc0
+[927599.996414] FS:  00007fc2fc97f740(0000) GS:ffff92637fe80000(0000) knlGS:0000000000000000
+[927599.997143] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+[927599.997840] CR2: 00007fc2fbff0440 CR3: 0000000008992000 CR4: 00000000001607e0
+[927599.998605] Call Trace:
+[927599.999377]  [<ffffffff9759a0f3>] move_freepages_block+0x73/0x80
+[927600.000134]  [<ffffffff9759bc04>] __rmqueue+0x264/0x460
+[927600.000877]  [<ffffffff9759e3ec>] get_page_from_freelist+0x64c/0x9e0
+[927600.001682]  [<ffffffff9759e917>] __alloc_pages_nodemask+0x197/0xbb0
+[927600.002498]  [<ffffffff975cc387>] ? vma_merge+0x107/0x370
+[927600.003316]  [<ffffffff975cc9ff>] ? vma_set_page_prot+0x2f/0x50
+[927600.004105]  [<ffffffff975e8ce8>] alloc_pages_current+0x98/0x110
+[927600.004895]  [<ffffffff9759934e>] __get_free_pages+0xe/0x40
+[927600.005733]  [<ffffffff97692111>] environ_read+0x41/0x1c0
+[927600.006581]  [<ffffffff976d13bc>] ? security_file_permission+0x8c/0xa0
+[927600.007438]  [<ffffffff9761b2ff>] vfs_read+0x9f/0x170
+[927600.008296]  [<ffffffff9761c1cf>] SyS_read+0x7f/0xf0
+[927600.009125]  [<ffffffff97b20795>] system_call_fastpath+0x1c/0x21
+[927600.009969] Code: f5 60 f8 13 98 e9 26 ff ff ff 0f 1f 00 48 89 d0 48 c1 ea 29 48 c1 e8 36 81 e2 00 18 00 00 48 03 14 c5 60 f8 13 98 e9 e4 fe ff ff <0f> 0b 0f 1f 44 00 00 4c 8b 05 a4 73 aa 00 48 89 f0 4c 29 c0 48
+[927600.011837] RIP  [<ffffffff9759a07e>] move_freepages+0x15e/0x160
+[927600.012770]  RSP <ffff9243bb3f7af8>
+
+[I.1] panic occurred while doing a move freepages block. Also have a bunch of ACPI
+      errors in here. Let's dig into the stack to see where we had an issue.
+
+crash> bt
+PID: 27763  TASK: ffff9243c7e44f10  CPU: 16  COMMAND: "systemd-cgroups"
+ #0 [ffff9243bb3f77a0] machine_kexec at ffffffff9746178a
+ #1 [ffff9243bb3f7800] __crash_kexec at ffffffff97513bf2
+ #2 [ffff9243bb3f78d0] crash_kexec at ffffffff97513ce0
+ #3 [ffff9243bb3f78e8] oops_end at ffffffff97b18728
+ #4 [ffff9243bb3f7910] die at ffffffff9742e96b
+ #5 [ffff9243bb3f7940] do_trap at ffffffff97b17ea0
+ #6 [ffff9243bb3f7990] do_invalid_op at ffffffff9742b284
+ #7 [ffff9243bb3f7a40] invalid_op at ffffffff97b23aee
+    [exception RIP: move_freepages+0x15e]
+    RIP: ffffffff9759a07e  RSP: ffff9243bb3f7af8  RFLAGS: 00010087
+    RAX: ffff9263fffda000  RBX: ffffea8186000000  RCX: 0000000000000001
+    RDX: ffff9263fffd9000  RSI: 0000000000000000  RDI: ffff9263fffda000
+    RBP: ffff9243bb3f7b48   R8: 0000000002080000   R9: 00000000001801ff
+    R10: ffffea8186007fc0  R11: 0000000000000246  R12: 0000000000000001
+    R13: 0000000000000001  R14: ffff9263fffda0f8  R15: ffffea8186007fc0
+    ORIG_RAX: ffffffffffffffff  CS: 0010  SS: 0018
+ #8 [ffff9243bb3f7af0] move_freepages at ffffffff9759a00c
+ #9 [ffff9243bb3f7b50] move_freepages_block at ffffffff9759a0f3
+#10 [ffff9243bb3f7b60] __rmqueue at ffffffff9759bc04
+#11 [ffff9243bb3f7bd0] get_page_from_freelist at ffffffff9759e3ec
+#12 [ffff9243bb3f7ce0] __alloc_pages_nodemask at ffffffff9759e917
+#13 [ffff9243bb3f7e18] alloc_pages_current at ffffffff975e8ce8
+#14 [ffff9243bb3f7e60] __get_free_pages at ffffffff9759934e
+#15 [ffff9243bb3f7e70] environ_read at ffffffff97692111
+#16 [ffff9243bb3f7ed8] vfs_read at ffffffff9761b2ff
+#17 [ffff9243bb3f7f08] sys_read at ffffffff9761c1cf
+#18 [ffff9243bb3f7f50] system_call_fastpath at ffffffff97b20795
+    RIP: 00007fc2fc068c00  RSP: 00007ffde1ef5fd8  RFLAGS: 00010246
+    RAX: 0000000000000000  RBX: 0000556d8bb8a010  RCX: 0000000000000000
+    RDX: 0000000000000400  RSI: 00007fc2fc997000  RDI: 0000000000000000
+    RBP: 00007fc2fc33c3a0   R8: ffffffffffffffff   R9: 0000000000000000
+    R10: 0000000000000022  R11: 0000000000000246  R12: 00007fc2fc33b858
+    R13: 0000000000000d70  R14: 0000000000000d70  R15: 00007fc2fc33b858
+    ORIG_RAX: 0000000000000000  CS: 0033  SS: 002b
+
+
+
+1478 int move_freepages_block(struct zone *zone, struct page *page,         <--- rdi, rsi
+1479                 int migratetype)
+1480 {
+1481     unsigned long start_pfn, end_pfn;
+1482     struct page *start_page, *end_page;
+1483
+1484     start_pfn = page_to_pfn(page);
+1485     start_pfn = start_pfn & ~(pageblock_nr_pages-1);
+1486     start_page = pfn_to_page(start_pfn);
+1487     end_page = start_page + pageblock_nr_pages - 1;
+1488     end_pfn = start_pfn + pageblock_nr_pages - 1;
+1489
+1490     /* Do not cross zone boundaries */
+1491     if (!zone_spans_pfn(zone, start_pfn))
+1492         start_page = page;
+1493     if (!zone_spans_pfn(zone, end_pfn))
+1494         return 0;
+1495
+1496     return move_freepages(zone, start_page, end_page, migratetype);
+
+1429 /*
+1430  * Move the free pages in a range to the free lists of the requested type.
+1431  * Note that start_page and end_pages are not aligned on a pageblock
+1432  * boundary. If alignment is required, use move_freepages_block()
+1433  */
+1434 int move_freepages(struct zone *zone,                          <--- rdi
+1435               struct page *start_page, struct page *end_page,  <--- rsi, rdx
+1436               int migratetype)
+1437 {
+1438     struct page *page;
+1439     unsigned long order;
+1440     int pages_moved = 0;
+1441
+1442 #ifndef CONFIG_HOLES_IN_ZONE
+1443     /*
+1444      * page_zone is not safe to call in this context when
+1445      * CONFIG_HOLES_IN_ZONE is set. This bug check is probably redundant
+1446      * anyway as we check zone boundaries in move_freepages_block().
+1447      * Remove at a later date when no bug reports exist related to
+1448      * grouping pages by mobility
+1449      */
+1450     BUG_ON(page_zone(start_page) != page_zone(end_page));          <---
+
+[I.2] Interacting a lot with a page so let's get the page and walk through this.
+      First goal is getting the page* we pass into move_freepages_block.
+
+crash> dis -r ffffffff9759bc04 | tail
+0xffffffff9759bbe0 <__rmqueue+0x240>:	cmpl   $0x1,-0x30(%rbp)
+0xffffffff9759bbe4 <__rmqueue+0x244>:	je     0xffffffff9759bbf4 <__rmqueue+0x254>
+0xffffffff9759bbe6 <__rmqueue+0x246>:	mov    0xba8eb8(%rip),%edx        # 0xffffffff98144aa4
+0xffffffff9759bbec <__rmqueue+0x24c>:	test   %edx,%edx
+0xffffffff9759bbee <__rmqueue+0x24e>:	je     0xffffffff9759bdd5 <__rmqueue+0x435>
+0xffffffff9759bbf4 <__rmqueue+0x254>:	mov    -0x30(%rbp),%edx             <--- int migratetype
+0xffffffff9759bbf7 <__rmqueue+0x257>:	mov    -0x38(%rbp),%rsi             <--- struct page *page
+0xffffffff9759bbfb <__rmqueue+0x25b>:	mov    -0x40(%rbp),%rdi             <--- struct zone *zone
+0xffffffff9759bbff <__rmqueue+0x25f>:	callq  0xffffffff9759a080 <move_freepages_block>
+
+crash> dis -r ffffffff9759a0f3
+0xffffffff9759a080 <move_freepages_block>:      nopl   0x0(%rax,%rax,1) [FTRACE NOP]
+0xffffffff9759a085 <move_freepages_block+0x5>:  mov    0xaa73a4(%rip),%r8        # 0xffffffff98041430
+0xffffffff9759a08c <move_freepages_block+0xc>:  mov    %rsi,%rax
+0xffffffff9759a08f <move_freepages_block+0xf>:  sub    %r8,%rax
+0xffffffff9759a092 <move_freepages_block+0x12>: sar    $0x6,%rax
+0xffffffff9759a096 <move_freepages_block+0x16>: and    $0xfffffffffffffe00,%rax
+0xffffffff9759a09c <move_freepages_block+0x1c>: mov    %rax,%r9
+0xffffffff9759a09f <move_freepages_block+0x1f>: shl    $0x6,%r9
+0xffffffff9759a0a3 <move_freepages_block+0x23>: lea    (%r9,%r8,1),%r10
+0xffffffff9759a0a7 <move_freepages_block+0x27>: mov    0x760(%rdi),%r8
+0xffffffff9759a0ae <move_freepages_block+0x2e>: lea    0x1ff(%rax),%r9
+0xffffffff9759a0b5 <move_freepages_block+0x35>: cmp    %r8,%rax
+0xffffffff9759a0b8 <move_freepages_block+0x38>: jb     0xffffffff9759a0cb <move_freepages_block+0x4b>
+0xffffffff9759a0ba <move_freepages_block+0x3a>: mov    %r8,%rcx
+0xffffffff9759a0bd <move_freepages_block+0x3d>: add    0x768(%rdi),%rcx
+0xffffffff9759a0c4 <move_freepages_block+0x44>: cmp    %rcx,%rax
+0xffffffff9759a0c7 <move_freepages_block+0x47>: cmovb  %r10,%rsi
+0xffffffff9759a0cb <move_freepages_block+0x4b>: xor    %eax,%eax
+0xffffffff9759a0cd <move_freepages_block+0x4d>: cmp    %r8,%r9
+0xffffffff9759a0d0 <move_freepages_block+0x50>: jb     0xffffffff9759a0f4 <move_freepages_block+0x74>
+0xffffffff9759a0d2 <move_freepages_block+0x52>: add    0x768(%rdi),%r8
+0xffffffff9759a0d9 <move_freepages_block+0x59>: cmp    %r8,%r9
+0xffffffff9759a0dc <move_freepages_block+0x5c>: jae    0xffffffff9759a0f4 <move_freepages_block+0x74>
+0xffffffff9759a0de <move_freepages_block+0x5e>: push   %rbp                 <--- move rbp on the stack (it's really far down. that's new)
+0xffffffff9759a0df <move_freepages_block+0x5f>: add    $0x7fc0,%r10
+0xffffffff9759a0e6 <move_freepages_block+0x66>: mov    %edx,%ecx
+0xffffffff9759a0e8 <move_freepages_block+0x68>: mov    %r10,%rdx
+0xffffffff9759a0eb <move_freepages_block+0x6b>: mov    %rsp,%rbp
+0xffffffff9759a0ee <move_freepages_block+0x6e>: callq  0xffffffff97599f20 <move_freepages>
+
+crash> bt -f | awk '/move_freepages_block/,/__rmqueue/'
+ #9 [ffff9243bb3f7b50] move_freepages_block at ffffffff9759a0f3
+    ffff9243bb3f7b58: ffff9243bb3f7bc8 ffffffff9759bc04
+                        >>  rbp  <<        rip
+#10 [ffff9243bb3f7b60] __rmqueue at ffffffff9759bc04
+
+crash> p (0xffff9243bb3f7bc8 - 0x38)        <--- rbp - 0x38 for the *page
+$2 = 0xffff9243bb3f7b90
+
+crash> rd 0xffff9243bb3f7b90 -x
+ffff9243bb3f7b90:  ffffea8186004e00         <--- *page
+
+crash> kmem ffffea8186004e00
+NODE
+  0
+ZONE  NAME        SIZE    FREE      MEM_MAP       START_PADDR  START_MAPNR
+  2   Normal    33030144   29389  ffffea8184000000   100000000     1048575
+AREA    SIZE  FREE_AREA_STRUCT
+  1       8k  ffff9263fffda0f8
+ffffea8186004e00  (ffffea8186004e00 is 1st of 2 pages)
+
+      PAGE         PHYSICAL      MAPPING       INDEX CNT FLAGS
+ffffea8186004e00  180138000                0        0  0 2fffff00000000
+
+
+Just for fun, let's get the migrate type and zone while we are here since we need it later.
+
+crash> p (0xffff9243bb3f7bc8 - 0x40)
+$11 = 0xffff9243bb3f7b88
+
+crash> rd 0xffff9243bb3f7b88 -x
+ffff9243bb3f7b88:  ffff9263fffda000     <--- zone
+
+crash> p (0xffff9243bb3f7bc8 - 0x30)
+$12 = 0xffff9243bb3f7b98
+
+crash> rd 0xffff9243bb3f7b98 -x
+ffff9243bb3f7b98:  0000000000000001     <--- migrate type
+
+
+
+[I.3] So we have our page address. Now we need to walk the code path to see what
+      happens to it.
+
+1478 int move_freepages_block(struct zone *zone, struct page *page,
+1479                 int migratetype)
+1480 {
+1481     unsigned long start_pfn, end_pfn;
+1482     struct page *start_page, *end_page;
+1483
+1484     start_pfn = page_to_pfn(page);
+
+        80 #define page_to_pfn __page_to_pfn
+
+             50 #elif defined(CONFIG_SPARSEMEM_VMEMMAP)         <--- CONFIG_SPARSEMEM_VMEMMAP=y
+             51
+             52 /* memmap is virtually contiguous.  */
+             53 #define __pfn_to_page(pfn)  (vmemmap + (pfn))
+             54 #define __page_to_pfn(page) (unsigned long)((page) - vmemmap)  <--- help -m says vmemmap_vaddr: ffffea8180000000
+
+
+page* page, ffffea8186004e00
+POINTER ARITHMETIC: (page) - vmemmap ---> (val - val) / sizeof(val)
+
+crash> struct page | grep SIZE
+SIZE: 0x40
+
+(page) - vmemmap = px (0xffffea8186004e00 - (0xffffea8180000000)) / 0x40 = 0x180138
+
+
+1485     start_pfn = start_pfn & ~(pageblock_nr_pages-1);
+
+
+         60 #define pageblock_nr_pages  (1UL << pageblock_order)
+
+                 39 #ifdef CONFIG_HUGETLB_PAGE          <--- CONFIG_HUGETLB_PAGE=y
+                 40
+                 41 #ifdef CONFIG_HUGETLB_PAGE_SIZE_VARIABLE    <--- false
+                 - - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+                 46 #else /* CONFIG_HUGETLB_PAGE_SIZE_VARIABLE */
+                 47
+                 48 /* Huge pages are a constant size */
+                 49 #define pageblock_order     HUGETLB_PAGE_ORDER
+
+                        32 #define HUGETLB_PAGE_ORDER  (HPAGE_SHIFT - PAGE_SHIFT)
+
+                                29 #define HPAGE_SHIFT     PMD_SHIFT
+
+                                         42 #define PMD_SHIFT   21
+
+                                 9 #define PAGE_SHIFT  12
+
+pageblock_nr_pages = 1UL << pageblock_order
+pageblock_order = PMD_SHIFT - PAGE_SHIFT = 21 - 12 = 9
+pageblock_nr_pages = 1UL << pageblock_order = 0x200
+~(pageblock_nr_pages-1) = ~(0x200 - 0x1) = 0xfffffe00
+start_pfn = start_pfn & ~(pageblock_nr_pages-1) = 0x180138 & 0xfffffe00 = 0x180000
+
+
+1486     start_page = pfn_to_page(start_pfn);
+
+         81 #define pfn_to_page __pfn_to_page
+
+               53 #define __pfn_to_page(pfn)  (vmemmap + (pfn))
+
+
+start_page = pfn_to_page(start_pfn) = 0xffffea8180000000 + (0x180000 * 0x40) = 0xffffea8186000000
+
+
+1487     end_page = start_page + pageblock_nr_pages - 1;
+
+
+end_page = start_page + pageblock_nr_pages - 1 = 0xffffea8186000000 + ((0x200 - 0x1) * 0x40) = 0xffffea8186007fc0
+
+
+1488     end_pfn = start_pfn + pageblock_nr_pages - 1;
+
+
+end_pfn = start_pfn + pageblock_nr_pages - 1 = 0x180000 + 0x200 - 1 = 0x1801ff
+
+
+1489
+1490     /* Do not cross zone boundaries */
+1491     if (!zone_spans_pfn(zone, start_pfn))
+
+     598 static inline bool zone_spans_pfn(const struct zone *zone, unsigned long pfn)
+     599 {
+     600     return zone->zone_start_pfn <= pfn && pfn < zone_end_pfn(zone);
+     601 }
+
+         593 static inline unsigned long zone_end_pfn(const struct zone *zone)
+         594 {
+         595     return zone->zone_start_pfn + zone->spanned_pages;
+         596 }
+
+
+crash> struct zone.zone_start_pfn,spanned_pages ffff9263fffda000
+  zone_start_pfn = 0x100000
+  spanned_pages = 0x1f80000
+
+0x100000 <= 0x180000 && 0x180000 <= 0x2080000           <--- TRUE
+
+
+1492         start_page = page;
+1493     if (!zone_spans_pfn(zone, end_pfn))    <--- not taken
+1494         return 0;                          <--- not taken
+1495
+
+
+0x100000 <= 0x1801ff && 0x1801ff <= 0x2080000           <--- TRUE
+
+1496     return move_freepages(zone, start_page, end_page, migratetype);  <--- 0xffff9263fffda000, 0xffffea8186000000, 0xffffea8186007fc0, 0x1
+
+
+[I.4] Turns out we will end up moving a swath of pages likely for the buddy
+      allocator, maybe for numa balancing. Regardless, we have a range of pages
+      being moved. The issue is the zones don't
+Recap:
+ - page *page = 0xffffea8186004e00
+ - page start_page = 0xffffea8186000000
+ - start_pfn = 0x180000
+ - end_page = 0xffffea8186007fc0
+ - end_pfn = 0x1801ff
+ - zone = ffff9263fffda000
+ - migratetype = 0x1
+
+
+1429 /*
+1430  * Move the free pages in a range to the free lists of the requested type.
+1431  * Note that start_page and end_pages are not aligned on a pageblock
+1432  * boundary. If alignment is required, use move_freepages_block()
+1433  */
+1434 int move_freepages(struct zone *zone,
+1435               struct page *start_page, struct page *end_page,
+1436               int migratetype)
+1437 {
+1438     struct page *page;
+1439     unsigned long order;
+1440     int pages_moved = 0;
+1441
+1442 #ifndef CONFIG_HOLES_IN_ZONE
+1443     /*
+1444      * page_zone is not safe to call in this context when
+1445      * CONFIG_HOLES_IN_ZONE is set. This bug check is probably redundant
+1446      * anyway as we check zone boundaries in move_freepages_block().
+1447      * Remove at a later date when no bug reports exist related to
+1448      * grouping pages by mobility
+1449      */
+1450     BUG_ON(page_zone(start_page) != page_zone(end_page));
+
+- - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+TO SAVE TIME, I READ IN UNDERSTANDING THE LINUX KERNEL THE HIGH ORDER 10 BITS ARE
+USED FOR STORING THE NUMA NODE AND NEXT 2 BITS FOR THE ZONE
+- - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+
+crash> struct page.flags 0xffffea8186000000
+  flags = 0x0               <--- ?
+
+crash> struct page.flags 0xffffea8186007fc0
+  flags = 0x2fffff00000080
+
+
+ crash> kmem 0xffffea8186000000
+      PAGE         PHYSICAL      MAPPING       INDEX CNT FLAGS
+ffffea8186000000  180000000                0        0  0 0
+
+struct page {
+  flags = 0x0,
+  mapping = 0x0,
+  {
+    {
+      index = 0x0,
+      freelist = 0x0,
+      rh_reserved_pfmemalloc = 0x0,
+      thp_mmu_gather = {
+        counter = 0x0
+      },
+      pmd_huge_pte = 0x0
+    },
+    {
+      counters = 0x0,
+      {
+        {
+          _mapcount = {
+            counter = 0x0
+          },
+          {
+            inuse = 0x0,
+            objects = 0x0,
+            frozen = 0x0
+          },
+          units = 0x0
+        },
+        _count = {
+          counter = 0x0
+        }
+      }
+    }
+  },
+  {
+    lru = {
+      next = 0x0,
+      prev = 0x0
+    },
+    pgmap = 0x0,
+    {
+      next = 0x0,
+      pages = 0x0,
+      pobjects = 0x0
+    },
+    list = {
+      next = 0x0,
+      prev = 0x0
+    },
+    slab_page = 0x0
+  },
+  {
+    private = 0x0,
+    ptl = {
+      {
+        rlock = {
+          raw_lock = {
+            val = {
+              counter = 0x0
+            }
+          }
+        }
+      }
+    },
+    slab_cache = 0x0,
+    first_page = 0x0
+  }
+}
+
+crash> kmem 0xffffea8186000000
+      PAGE         PHYSICAL      MAPPING       INDEX CNT FLAGS
+ffffea8186000000  180000000                0        0  0 0
+
+
+
+crash> kmem -p
+      PAGE         PHYSICAL      MAPPING       INDEX CNT FLAGS
+- - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+ffffea8185ffff00  17fffc000                0        0  1 2fffff00000000
+ffffea8185ffff40  17fffd000                0        0  1 2fffff00000000
+ffffea8185ffff80  17fffe000                0        0  1 2fffff00000000
+ffffea8185ffffc0  17ffff000                0        0  1 2fffff00000000
+ffffea8186000000  180000000                0        0  0 0
+ffffea8186000040  180001000                0        0  0 0
+ffffea8186000080  180002000                0        0  0 0
+ffffea81860000c0  180003000                0        0  0 0
+ffffea8186000100  180004000                0        0  0 0
+ffffea8186000140  180005000                0        0  0 0
+ffffea8186000180  180006000                0        0  0 0
+ffffea81860001c0  180007000                0        0  1 2fffff00000080 slab
+ffffea8186000200  180008000                0        0  1 2fffff00004080 slab,head
+ffffea8186000240  180009000                0        0  0 2fffff00008000 tail
+ffffea8186000280  18000a000                0        0  0 2fffff00008000 tail
+ffffea81860002c0  18000b000                0        0  0 2fffff00008000 tail
+- - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+
+
+
+
+SUMMARY
+ - Panicked while attempting to migrate pages around for the buddy allocator
+ - Panic was due to BUG_ON(page_zone(start_page) != page_zone(end_page));
+ - This failed because start_page, 0xffffea8186000000 wasn't in the same zone as
+   0xffffea8186007fc0, the end page.
+ - What really happened was 0xffffea8186000000 has null members so thus it would
+   fail regardless.
+ - Interestingly, the 6 pages preceding it also are nulled out.
+ - Their physical addresses are 0x180000000 - 0x180006000, reside in Node 0 in
+   the Normal Zone
+ -
+crash> p iomem_resource
+iomem_resource = $10 = {
+  start = 0x0,
+  end = 0x3fffffffffff,
+  name = 0xffffffff97e68b1c "PCI mem",
+  flags = 0x200,
+  parent = 0x0,
+  sibling = 0x0,
+  child = 0xffff9283fffff140
+}
+
+crash> struct resource 0xffff9283fffff140
+struct resource {
+  start = 0x0,
+  end = 0xfff,
+  name = 0xffffffff97eab884 "reserved",
+  flags = 0x80000200,
+  parent = 0xffffffff98045180,
+  sibling = 0xffff9283fffff178,
+  child = 0x0
+}
+
+crash> struct resource 0xffff9283fffff178,
+struct resource {
+  start = 0x1000,
+  end = 0x9ffff,
+  name = 0xffffffff97e4a17f "System RAM",
+  flags = 0x80000200,
+  parent = 0xffffffff98045180,
+  sibling = 0xffff924500254200,
+  child = 0x0
+}
+
+
+
+
+crash> epython /cores/crashext/neelx/page_init_bug.py
+<struct resource 0xffff9283fffff648>     180007000 -   407fffffff	System RAM (252.00 GiB = 258047.97 MiB = 264241124.00 KiB)
+<struct page 0xffffea81860001c0>   2fffff00000080  0 <struct pglist_data 0xffff9263fffd9000> 2 <struct zone 0xffff9263fffda000> Normal      1048576   34078719
+<struct page 0xffffea81860001c0> 1572871 1572864 <struct page 0xffffea8186000000> 1573375 <struct page 0xffffea8186007fc0>
+<struct page 0xffffea8186000000>                0  0 <struct pglist_data 0xffff9263fffd9000> 0 <struct zone 0xffff9263fffd9000> DMA               1       4095
+<struct page 0xffffea8186007fc0>   2fffff00000080  0 <struct pglist_data 0xffff9263fffd9000> 2 <struct zone 0xffff9263fffda000> Normal      1048576   34078719
+BUG, zones differ!
+memmap=2020K$0x180007000
+
+Test matched a known issue! A possible workaround could be adding
+
+memmap=2020K$0x180007000
+
+to kernel command line.
+
+ ** Execution took   0.87s (real)   0.59s (CPU)
+
+
+135 void main(void)
+- - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+183     go_to_protected_mode();
+
+
+https://github.com/0xAX/linux-insides/blob/master/Booting/linux-bootstrap-6.md
+
+
+Looking at how the pages are enumerated! and maybe the zones?
+
+Looks like setup of the system occurs in ./arch/x86/kernel/setup.c:setup_arch
+
+
+init/main.c:
+ 488 asmlinkage void __init start_kernel(void)                      <--- where we actually start
+- - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+ 516     page_address_init();
+
+    mm/highmem.c
+    414 void __init page_address_init(void)
+    415 {
+    416     int i;
+    417
+    418     for (i = 0; i < ARRAY_SIZE(page_address_htable); i++) {
+    419         INIT_LIST_HEAD(&page_address_htable[i].lh);
+    420         spin_lock_init(&page_address_htable[i].lock);
+    421     }
+    422 }
+
+ 517     pr_notice("%s", linux_banner);
+ 518     setup_arch(&command_line);
+
+    1005 void __init setup_arch(char **cmdline_p)
+    - - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+    1279     init_mem_mapping();            <--- just builds page tables and sets pfns to them
+    - - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+    1385     init_cpu_to_node();
+
+        718 /*
+        719  * Setup early cpu_to_node.
+        720  *
+        721  * Populate cpu_to_node[] only if x86_cpu_to_apicid[],
+        722  * and apicid_to_node[] tables have valid entries for a CPU.
+        723  * This means we skip cpu_to_node[] initialisation for NUMA
+        724  * emulation and faking node case (when running a kernel compiled
+        725  * for NUMA on a non NUMA box), which is OK as cpu_to_node[]
+        726  * is already initialized in a round robin manner at numa_init_array,
+        727  * prior to this call, and this initialization is good enough
+        728  * for the fake NUMA cases.
+        729  *
+        730  * Called before the per_cpu areas are setup.
+        731  */
+        732 void __init init_cpu_to_node(void)
+        - - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+        746             init_memory_less_node(node);
+
+            703 static void __init init_memory_less_node(int nid)
+            704 {
+            705     unsigned long zones_size[MAX_NR_ZONES] = {0};
+            706     unsigned long zholes_size[MAX_NR_ZONES] = {0};
+            707
+            708     /* Allocate and initialize node data. Memory-less node is now online.*/
+            709     alloc_node_data(nid);
+            710     free_area_init_node(nid, zones_size, 0, zholes_size);
+
+
+                5677 void __init_refok free_area_init_node(int nid, unsigned long *zones_size,
+                5678         unsigned long node_start_pfn, unsigned long *zholes_size)
+                5679 {
+                - - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+                5714     free_area_init_core(pgdat, start_pfn, end_pfn);
+                5715 }
+
+                    5530 /*
+                    5531  * Set up the zone data structures:
+                    5532  *   - mark all pages reserved
+                    5533  *   - mark all memory queues empty
+                    5534  *   - clear the memory bitmaps
+                    5535  *
+                    5536  * NOTE: pgdat should get zeroed by caller.
+                    5537  */
+                    5538 static void __paginginit free_area_init_core(struct pglist_data *pgdat,
+                    5539         unsigned long node_start_pfn, unsigned long node_end_pfn)
+                    5540 {
+                    - - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+                    5627         set_pageblock_order();
+                    5628         setup_usemap(pgdat, zone, zone_start_pfn, size);
+                    5629         ret = init_currently_empty_zone(zone, zone_start_pfn,
+                    5630                         size, MEMMAP_EARLY);
+                    5631         BUG_ON(ret);
+                    5632         memmap_init(size, nid, j, zone_start_pfn);
+
+                        4825 #ifndef __HAVE_ARCH_MEMMAP_INIT
+                        4826 #define memmap_init(size, nid, zone, start_pfn) \
+                        4827     memmap_init_zone((size), (nid), (zone), (start_pfn), MEMMAP_EARLY)
+                        4828 #endif
+
+                            4694 /*
+                            4695  * Initially all pages are reserved - free ones are freed
+                            4696  * up by free_all_bootmem() once the early boot process is
+                            4697  * done. Non-atomic initialization, single-pass.
+                            4698  */
+                            4699 void __meminit memmap_init_zone(unsigned long size, int nid, unsigned long zone,
+                            4700         unsigned long start_pfn, enum memmap_context context)
+                            4701 {
+
+
+
+
+0x200000 is 2 MiB
+
+crash> kmem -p | head -1; kmem -p | awk '$NF ~ /^0$/'
+      PAGE         PHYSICAL      MAPPING       INDEX CNT FLAGS
+ffffea8181e00000   78000000                0        0  0 0
+ffffea8181e00040   78001000                0        0  0 0
+ffffea8181e00080   78002000                0        0  0 0
+ffffea8181e000c0   78003000                0        0  0 0
+ffffea8181e00100   78004000                0        0  0 0
+- - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+ffffea8181e07f80   781fe000                0        0  0 0
+ffffea8181e07fc0   781ff000                0        0  0 0
+ffffea8181e08000   78200000                0        0  0 0
+ffffea8181e08040   78201000                0        0  0 0
+ffffea8181e08080   78202000                0        0  0 0
+- - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+ffffea8181eeff40   7bbfd000                0        0  0 0
+ffffea8181eeff80   7bbfe000                0        0  0 0
+ffffea8181eeffc0   7bbff000                0        0  0 0
+ffffea8186000000  180000000                0        0  0 0
+ffffea8186000040  180001000                0        0  0 0
+ffffea8186000080  180002000                0        0  0 0
+
+
+
+crash> kmem -p
+- - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+ffffea8181bfff40   6fffd000                0        0  1 1fffff00000000
+ffffea8181bfff80   6fffe000                0        0  1 1fffff00000000
+ffffea8181bfffc0   6ffff000                0        0  1 1fffff00000000
+ffffea8181e00000   78000000                0        0  0 0          | This is
+ffffea8181e00040   78001000                0        0  0 0          | all DMA32
+- - - - - - - - - - - - [SNIP] - - - - - - - - - - - -              | memory
+ffffea8181eeff80   7bbfe000                0        0  0 0          | 0x01000000
+ffffea8181eeffc0   7bbff000                0        0  0 0          | -0xffffffff
+ffffea8181ef0000   7bc00000                0        0  1 1fffff00000000
+ffffea8181ef0040   7bc01000                0        0  1 1fffff00000000
+ffffea8181ef0080   7bc02000                0        0  1 1fffff00000000
+- - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+ffffea8185ffff40  17fffd000                0        0  1 2fffff00000000
+ffffea8185ffff80  17fffe000                0        0  1 2fffff00000000
+ffffea8185ffffc0  17ffff000                0        0  1 2fffff00000000
+ffffea8186000000  180000000                0        0  0 0
+ffffea8186000040  180001000                0        0  0 0
+ffffea8186000080  180002000                0        0  0 0
+ffffea81860000c0  180003000                0        0  0 0
+ffffea8186000100  180004000                0        0  0 0
+ffffea8186000140  180005000                0        0  0 0
+ffffea8186000180  180006000                0        0  0 0
+ffffea81860001c0  180007000                0        0  1 2fffff00000080 slab
+ffffea8186000200  180008000                0        0  1 2fffff00004080 slab,head
+ffffea8186000240  180009000                0        0  0 2fffff00008000 tail
+- - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x00001000-0x0009ffff]
+[    0.000000]   node   0: [mem 0x00100000-0x6f191fff]
+[    0.000000]   node   0: [mem 0x7bd06000-0x7bd06fff]
+[    0.000000]   node   0: [mem 0x7bd8d000-0x7bffffff]
+[    0.000000]   node   0: [mem 0x100000000-0x17fffffff]    <--- This looks like
+[    0.000000]   node   0: [mem 0x180007000-0x207fffffff]   <--- we don't include them
+[    0.000000]   node   1: [mem 0x2080000000-0x407fffffff]
+
+ 334 struct zone {
+- - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+ 467     /* zone_start_pfn == zone_start_paddr >> PAGE_SHIFT */           <--- 12
+ 468     unsigned long       zone_start_pfn;
+- - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+ 471      * spanned_pages is the total pages spanned by the zone, including
+ 472      * holes, which is calculated as:
+ 473      *  spanned_pages = zone_end_pfn - zone_start_pfn;
+ 474      *
+ 475      * present_pages is physical pages existing within the zone, which
+ 476      * is calculated as:
+ 477      *  present_pages = spanned_pages - absent_pages(pages in holes);
+ 478      *
+ 479      * managed_pages is present pages managed by the buddy system, which
+ 480      * is calculated as (reserved_pages includes pages allocated by the
+ 481      * bootmem allocator):
+ 482      *  managed_pages = present_pages - reserved_pages;
+ 483      *
+ 484      * So present_pages may be used by memory hotplug or memory power
+ 485      * management logic to figure out unmanaged pages by checking
+ 486      * (present_pages - managed_pages). And managed_pages should be used
+ 487      * by page allocator and vm scanner to calculate all kinds of watermarks
+ 488      * and thresholds.
+- - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
+ 511     unsigned long       spanned_pages;
+ 512     unsigned long       present_pages;
+ 513     unsigned long       managed_pages;
+
+
+crash> p node_data[0]
+$8 = (struct pglist_data *) 0xffff9263fffd9000
+
+crash> struct pglist_data 0xffff9263fffd9000 | grep -e 'node =' -e node_start_pfn -e zone_start_pfn -e spanned_pages -e name
+      node = 0x0,
+      zone_start_pfn = 0x1,
+      spanned_pages = 0xfff,
+      name = 0xffffffff97ea1507 "DMA",
+      node = 0x0,
+      zone_start_pfn = 0x1000,
+      spanned_pages = 0xff000,
+      name = 0xffffffff97e75b25 "DMA32",
+      node = 0x0,
+      zone_start_pfn = 0x100000,
+      spanned_pages = 0x1f80000,
+      name = 0xffffffff97e75b2b "Normal",
+      node = 0x0,
+      zone_start_pfn = 0x0,
+      spanned_pages = 0x0,
+      name = 0xffffffff97e75b32 "Movable",
+  node_start_pfn = 0x1,
+  node_spanned_pages = 0x207ffff,
+
+crash> eval 0x100000 << 12
+hexadecimal: 100000000  (4GB)       <---
+
+
+
+So why are these pages not initialized? There's a bunch of places in memmap_init_zone where we could
+skip over a pfn or full blocks of memory. Let's parse them:
+
+
+4737         if (!early_pfn_valid(pfn)) {
+4738 #ifdef CONFIG_HAVE_MEMBLOCK_NODE_MAP                    <--- CONFIG_HAVE_MEMBLOCK_NODE_MAP=y
+
+    1329 #define early_pfn_valid(pfn)    pfn_valid(pfn)
+
+		1298 #ifndef CONFIG_HAVE_ARCH_PFN_VALID              <--- undefined
+		1299 static inline int pfn_valid(unsigned long pfn)
+		1300 {
+		1301     if (pfn_to_section_nr(pfn) >= NR_MEM_SECTIONS)
+
+			1189 static inline unsigned long pfn_to_section_nr(unsigned long pfn)
+			1190 {
+			1191     return pfn >> PFN_SECTION_SHIFT;
+
+				1175 #define PFN_SECTION_SHIFT   (SECTION_SIZE_BITS - PAGE_SHIFT)
+
+					 17 #ifdef CONFIG_X86_32 			      <--- undefined
+					 27 #else /* CONFIG_X86_32 */
+					 28 # define SECTION_SIZE_BITS  27 /* matt - 128 is convenient right now */
+					 29 # define MAX_PHYSADDR_BITS  44
+					 30 # define MAX_PHYSMEM_BITS   46
+					 31 #endif
+
+					  9 #define PAGE_SHIFT  12
+
+PFN_SECTION_SHIFT = SECTION_SIZE_BITS - PAGE_SHIFT = 27 - 12 = 15 = PFN_SECTION_SHIFT
+
+			1192 }
+
+pfn >> PFN_SECTION_SHIFT = pfn >> 15
+REMINDER: start_pfn = 0x180000
+pfn_to_section_nr(0x180000) == 0x30
+
+			1177 #define NR_MEM_SECTIONS     (1UL << SECTIONS_SHIFT)
+
+				 34 #define SECTIONS_SHIFT  (MAX_PHYSMEM_BITS - SECTION_SIZE_BITS)
+
+MAX_PHYSMEM_BITS = 46
+SECTION_SIZE_BITS = 27
+SECTIONS_SHIFT = MAX_PHYSMEM_BITS - SECTION_SIZE_BITS = 46 - 27 = 19 = SECTIONS_SHIFT
+NR_MEM_SECTIONS = 1UL << SECTIONS_SHIFT = 1 << 19 = 0x80000
+pfn_to_section_nr(pfn) >= NR_MEM_SECTIONS => 0x30 >= 0x80000 => false
+
+		1302         return 0; 							<--- not taken from the false above
+		1303     return valid_section(__nr_to_section(pfn_to_section_nr(pfn)));
+
+			1246 static inline struct mem_section *__nr_to_section(unsigned long nr)
+			1247 {
+			1248     if (!mem_section[SECTION_NR_TO_ROOT(nr)])
+
+				1236 #define SECTION_NR_TO_ROOT(sec) ((sec) / SECTIONS_PER_ROOT)
+
+					1231 #define SECTIONS_PER_ROOT       (PAGE_SIZE / sizeof (struct mem_section))
+
+SECTIONS_PER_ROOT = 0x1000 / 0x20 = 0x80 = SECTIONS_PER_ROOT
+SECTION_NR_TO_ROOT(0x30) = 0x30 / 0x80 = 0x0
+mem_section[SECTION_NR_TO_ROOT(0x30)] = mem_section[0] = 0xffff9263fffd8000, !mem_section[SECTION_NR_TO_ROOT(nr)] == FALSE
+
+			1249         return NULL; 					<--- not taken because of FALSE above
+			1250     return &mem_section[SECTION_NR_TO_ROOT(nr)][nr & SECTION_ROOT_MASK];
+
+				1238 #define SECTION_ROOT_MASK   (SECTIONS_PER_ROOT - 1)
+
+SECTION_ROOT_MASK = SECTIONS_PER_ROOT - 1 = 0x80 - 1 = 0x7f = SECTION_ROOT_MASK
+nr & SECTION_ROOT_MASK = 0x30 & 0x7f = 0x30
+&mem_section[SECTION_NR_TO_ROOT(nr)][nr & SECTION_ROOT_MASK] = &mem_section[0x0][0x30]
+crash> p &mem_section[0x0][0x30]
+$3 = (struct mem_section *) 0xffff9263fffd8600
+
+			1251 }
+
+			1283 static inline int valid_section(struct mem_section *section)
+			1284 {
+			1285     return (section && (section->section_mem_map & SECTION_HAS_MEM_MAP));
+			1286 }
+
+				1261 #define SECTION_HAS_MEM_MAP (1UL<<1)
+
+SECTION_HAS_MEM_MAP = (1UL<<1) = 0x2
+section && (section->section_mem_map & SECTION_HAS_MEM_MAP) = 0xffff9263fffd8600 && (0xffffea8180000003 & 0x2)) = TRUE && 0x2 = TRUE
+valid_section(0xffff9263fffd8600) == TRUE
+
+		1304 }
+		1305 #endif
+
+
+4739             /*
+4740              * Skip to the pfn preceding the next valid one (or
+4741              * end_pfn), such that we hit a valid pfn (or end_pfn)
+4742              * on our next iteration of the loop. Note that it needs
+4743              * to be pageblock aligned even when the region itself
+4744              * is not as move_freepages_block() can shift ahead of
+4745              * the valid region but still depends on correct page
+4746              * metadata.
+4747              */
+4748             pfn = (memblock_next_valid_pfn(pfn, end_pfn) &
+4749                         ~(pageblock_nr_pages-1)) - 1;
+4750 #endif
+4751             continue; 					<--- not taken when we hit page 0x180000000 (problem page)
+4752         }
+4753         if (!early_pfn_in_nid(pfn, nid))
+
+	1062 static inline bool __meminit early_pfn_in_nid(unsigned long pfn, int node)
+	1063 {
+	1064     return meminit_pfn_in_nid(pfn, node, &early_pfnnid_cache);
+
+		1050 static inline bool __meminit meminit_pfn_in_nid(unsigned long pfn, int node,
+		1051                     struct mminit_pfnnid_cache *state)
+		1052 {
+		1053     int nid;
+		1054
+		1055     nid = __early_pfn_to_nid(pfn, state);
+
+			5078 /*
+			5079  * Required by SPARSEMEM. Given a PFN, return what node the PFN is on.
+			5080  * Architectures may implement their own version but if add_active_range()
+			5081  * was used and there are no special requirements, this is a convenient
+			5082  * alternative
+			5083  */
+			5084 int __meminit __early_pfn_to_nid(unsigned long pfn,
+			5085                     struct mminit_pfnnid_cache *state)
+			5086 {
+			5087     unsigned long start_pfn, end_pfn;
+			5088     int nid;
+			5089
+			5090     if (state->last_start <= pfn && pfn < state->last_end)
+			5091         return state->last_nid;
+
+state = early_pfnnid_cache, but is updated a few lines down likely
+pfn = 0x180000 (start_pfn from earlier)
+
+
+			5092
+			5093     nid = memblock_search_pfn_nid(pfn, &start_pfn, &end_pfn);
+
+				1492 int __init_memblock memblock_search_pfn_nid(unsigned long pfn,
+				1493              unsigned long *start_pfn, unsigned long *end_pfn)
+				1494 {
+				1495     struct memblock_type *type = &memblock.memory;
+
+$8 = (struct memblock_type *) 0xffffffff981139d0 = memblock_type.memory *type
+
+				1496     int mid = memblock_search(type, (phys_addr_t)pfn << PAGE_SHIFT);  		<--- 0x180000000
+
+					1463 static int __init_memblock memblock_search(struct memblock_type *type, phys_addr_t addr)
+					1464 {
+					1465     unsigned int left = 0, right = type->cnt; 		<--- 0x7
+					1466
+					1467     do {
+					1468         unsigned int mid = (right + left) / 2;
+					1469
+					1470         if (addr < type->regions[mid].base)
+					1471             right = mid;
+					1472         else if (addr >= (type->regions[mid].base +
+					1473                   type->regions[mid].size))
+					1474             left = mid + 1;
+					1475         else
+					1476             return mid;
+					1477     } while (left < right);
+					1478     return -1;
+					1479 }
+
+crash> struct memblock_type.regions 0xffffffff981139d0
+  regions = 0xffffffff98114a20, size 0x20
+type->regions[0] = memblock_region 0xffffffff98114a20
+type->regions[1] = memblock_region 0xffffffff98114a40
+type->regions[2] = memblock_region 0xffffffff98114a60
+type->regions[3] = memblock_region 0xffffffff98114a80
+type->regions[4] = memblock_region 0xffffffff98114aa0
+struct memblock_region {
+  base = 0x100000000,
+  size = 0x80000000,
+  flags = 0x0,
+  nid = 0x0
+}
+type->regions[5] = memblock_region 0xffffffff98114ac0
+struct memblock_region {
+  base = 0x180007000,
+  size = 0x1effff9000,
+  flags = 0x0,
+  nid = 0x0
+}
+
+Above are our range of reserved pages where we faulted in.
+180000000 would have matched regions[4]
+
+
+
+
+				1497
+				1498     if (mid == -1)
+				1499         return -1;
+				1500
+				1501     *start_pfn = type->regions[mid].base >> PAGE_SHIFT;
+				1502     *end_pfn = (type->regions[mid].base + type->regions[mid].size)
+				1503             >> PAGE_SHIFT;
+				1504
+				1505     return type->regions[mid].nid;
+				1506 }
+
+
+			5094     if (nid != -1) {
+			5095         state->last_start = start_pfn;
+			5096         state->last_end = end_pfn;
+			5097         state->last_nid = nid;
+			5098     }
+			5099
+			5100     return nid;
+			5101 }
+
+
+		1056     if (nid >= 0 && nid != node)
+		1057         return false;
+		1058     return true;             <---
+		1059 }
+
+	1065 }
+
+
+4754             continue;  // 4753         if (!early_pfn_in_nid(pfn, nid))    <--- eval to FALSE so not taken
+
+
+
+
+crash> eval 0x7bc00000 - 0x78000000
+hexadecimal: 3c00000  (60MB)
+
+crash> eval 0x180007000 - 0x180000000
+hexadecimal: 7000  (28KB)
+
+
+####################################################################################################
+########################################## ## QUESTIONS ## #########################################
+####################################################################################################
+
+RIGHT NOW YOU ARE TRYING TO FIND THE PAGES WE ARE LOOKING AT
+
+
+1) include/asm-generic/memory_model.h: which __page_to_pfn is actually used? Two
+preprocessor defines would be defined. It is in an elif, so once it is matched,
+stop looking?
+2) What is vmemmap in include/asm-generic/memory_model.h? is it the vmemmap_vaddr
+in help -m?
+3) What is a page frame number?
+4) 0xffffea0000000000 is vmemmap but the base is ffffea8180000000. KASLR?
+
+--------------------------------------------------------------------------------
+
+
+pfn = (addr - vmemmap_vaddr) / (sizeof(page))
+paddr = pfn << 16
