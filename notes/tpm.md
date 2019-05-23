@@ -74,3 +74,8 @@ Volatile Deactivated Status: false
 `Tspi_TPM_TakeOwnership failed: 0x00000007 - layer=tpm, code=0007 (7), TPM is disabled`
   * Typically means the TPM is disabled.
   * `tpm_setenable` usually resolves the issue
+
+`TPM Error:0x9a2` 
+  * Means the owner, endorsement, and/or locked out is not NULL 
+  * TPM will need to be reset from the hardware
+  * If unsure, run `tpm2_getcap -c properties-variable` (not sure if this pertains to tpm < 2.0)
