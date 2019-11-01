@@ -18,3 +18,12 @@
 C-Specific stuff
 
 - _Function Prototype_ defines how you interact with a function such as what it is called, what parameters, if any, need to be provided and what type are the parameters, and what the function is supposed to return, if anything, and what type the return value is. 
+
+### Control Logic
+
+- Describes what code to execute under certain conditions. For example, if something is true, then run a few functions but don't run them if false, or execute a set of functions repeatedly. 
+- Typical control logic statements in C:
+
+   - `if` tests an expression, if the expression is true, then execute wrapped code
+      - `if-else` variation of the `if` statement where if the statement is false, the wrapped code in the else section is executed
+
