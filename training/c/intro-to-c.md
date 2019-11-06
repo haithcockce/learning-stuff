@@ -27,23 +27,42 @@ C-Specific stuff
 - `/` divide and return the quotient with no remainder
 - `%` modulo, a variation of divide, but return the remainder and not the quotient
 
-#### C-specific relational and boolean operators
+#### C-specific arithmetic and relational operators
 
 - A family of logical expressions, rules, and representations.
 - The basic values are _true_ and _false_ and a language of operators are built around manipulating and representing these values in various ways to perform arithmetic on these values.
 - C utilizes boolean logic to execute code based on various conditions (such as should I update the file now or later,
 checking if something is finished, etc).
 
-- `!x` negation
 - `x == y` equivalency
 - `x != y` inequality
-- `x > y` greater than
-- `x < y` less than
-- ``
+- `x > y` greater than (`x >= y` greater than or equal to)
+- `x < y` less than (`x <= y` less than or equal to)
+- `x < y != z` relational chaining (evaluated left to right)
+- `x = y` assignment (x now has a copy of y's value)
+- `x += y` increment x by y and assign the new value to x
+- `x -= y` decrement x by y and assign the new value to x
+- `x *= y` multiplication and assignment
+- `x /= y` division and assignment
+- `x %= y` modulo and assignment
+- `x++` return the value of x, then increment x and assign x the new value
+- `++x` increment x and assign x the new value, then return the value of x
+- `x--, --x` decrement
 
-### Control Logic
+
+### Boolean Arithmetic and Control Logic
 
 - Describes what code to execute under certain conditions. For example, if something is true, then run a few functions but don't run them if false, or execute a set of functions repeatedly.
+- Based on boolean logic
+
+#### Boolean Operators
+
+- `x || y` evaluates TRUE if x is TRUE _or_ y is TRUE
+- `x && y` evaluates TRUE if x is TRUE _and_ y is TRUE
+- `!x` negation (TRUE becomes FALSE and vice-versa, but no assignment)
+
+#### Control Logic 
+
 - Typical control logic statements in C:
 
    - `if` tests an expression, if the expression is true, then execute wrapped code

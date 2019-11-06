@@ -1,10 +1,22 @@
 #include <stdio.h>
 
+void boolean_examples(void);
 void if_examples(void);
 void loop_examples(void);
 
+
+void boolean_examples() {
+    int x = 0;
+    int y = 25;
+    printf("Boolean examples\n");
+    printf("x = %d, y = %d\n", x, y);
+    printf("x || y => %d, x && y => %d, !y => %d\n", (x||y), (x&&y), (!y));
+}
+
 void if_examples(void) {
     int i = 0;
+
+    printf("if statement\n");
 
     /* if statement
      *
@@ -24,7 +36,7 @@ void if_examples(void) {
         printf("This still will never be executed!\n");
     }
     else {
-        print("This, however, will be executed!\n");
+        printf("This, however, will be executed!\n");
     }
 
     /* if-else if-else statement
@@ -44,9 +56,39 @@ void if_examples(void) {
 }
 
 void loop_examples() {
-    int i; 
+    int i = 0;
 
+    printf("Loop examples\n");
+    while (i++ < 3) {
+        printf("I should print 3 times, and i is currently %d\n", i);
+    }
+
+    for (i = 0; i < 3; i++) {
+        printf("I'm just a fancy while loop\n");
+    }
+
+    /* you can make infinite loops! */
+    i = 0;
+    do {
+        printf("Wait is this infinite?\n");
+        if (++i == 3) {
+            break;
+        }
+    } while (1);
+
+    /* All areas of a for loop are optional! */
+    for (i = 0;;) {
+        printf("Why would you make a loop like this?\n");
+        if (++i == 3) {
+            break;
+        }
+    }
+
+}
 
 
 void main() {
+    boolean_examples();
+    if_examples();
+    loop_examples();
 }
