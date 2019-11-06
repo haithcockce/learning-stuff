@@ -43,5 +43,10 @@ void if_examples(void) {
     }
 }
 
+void loop_examples() {
+    int i; 
+
+
+
 void main() {
 }
