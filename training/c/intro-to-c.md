@@ -61,10 +61,12 @@ checking if something is finished, etc).
 - `x && y` evaluates TRUE if x is TRUE _and_ y is TRUE
 - `!x` negation (TRUE becomes FALSE and vice-versa, but no assignment)
 
-#### Control Logic 
+#### Control Logic
 
 - Typical control logic statements in C:
 
+   - `goto` simply jump to the label in the goto statement
+   - `break` terminates loops and switch statements
    - `if` tests an expression, if the expression is true, then execute wrapped code
       - `if-else` variation of the `if` statement where if the statement is false, the wrapped code in the else section is executed
       - `if-else if-else` variation of the `if` statement where a series of if statements are logically grouped together. When one of the if statements evaluates to true, the rest of the statements in the grouping are not evaluated.
@@ -73,4 +75,25 @@ checking if something is finished, etc).
       - `for` loop, allows a starting condition to be defined, what conditions do we continue to repeat the code, and what to do for the loop specifically with each iteration of the loop execution.
       - `while` loop, only defines the conditions in which the loop continues to be repeatedly executed.
          - `do-while` loop, similar to a while loop except we test the stop conditions after loop execution instead of before.
-   - Switch statements
+   - Switch statements are akin to a fairly sophisticated if-else if-else lattice.
+      - An expression is evaluated (the switch), and each case is evaluated until terminated
+      - Cases can contain optional `break` statements to terminate the switch-case block if the case is executed
+      - If a case is executed and does not have a break, then the remainder of the cases will continue to be evaluated
+      - The case series can contain a single, optional `default` case which will execute in any scenario if the evaluations are not terminated early (such as with `break`, `return`, `goto`, etc)
+
+## Bits and Bytes
+
+- While C has "types", the types are quite loosely defined in so much that execution of a program doesn't care if you have a variable declared as one type but used as another. You will have compilation warnings but that's all.
+- What defines types in C is the amount of memory used to hold the value in terms of bytes, which can be checked with `sizeof()`
+- This flexibility allows for powerful manipulations of values, such using `char var = 'a'` then using arithmetic to change the letter, such as `var++`.
+- The type simply describes how to take the value in memory and interpret it. For example, all the if statements testing for true or false are really testing for a non-zero value (true) or a zero value (false)
+
+### Bitwise Arithmetic
+
+- Because we have access to the raw values in memory, we can interact with the values at the bit level.
+
+   - `x & y` x bitwise and with y, 1001 & 0101 => 0001
+   - `x | y` x bitwise or with y, 1001 | 0101 => 1101
+   - `x ^ y` x bitwise exclusive or with y, 1001 ^ 0101 => 1100
+   - `~x` bitwise negation of x, ~1001 => 0110
+   - `x >> y`/`x << y` bitshift x right/left by y amount of bits, 0101 >> 2 => 0001, 0101 << 2 => 0100

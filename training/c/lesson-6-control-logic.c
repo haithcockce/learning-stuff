@@ -3,6 +3,7 @@
 void boolean_examples(void);
 void if_examples(void);
 void loop_examples(void);
+void switch_example(void);
 
 
 void boolean_examples() {
@@ -80,10 +81,30 @@ void loop_examples() {
     for (i = 0;;) {
         printf("Why would you make a loop like this?\n");
         if (++i == 3) {
-            break;
+            goto exit_loopex;
         }
     }
+exit_loopex:
+    return;
+}
 
+void switch_example() {
+    int i = 0;
+    switch (i) {
+        case 1: 
+            printf("This will not be executed!\n");
+            break;
+        case 0:
+        case 2:
+            printf("This case should be executed!\n");
+        case 3:
+            printf("Wait, will this be executed?\n");
+            break;
+        case 4: 
+            printf("Well what about this one?\n");
+        default:
+            printf("If none of the other statements are hit, this will fire\n");
+    }
 }
 
 
@@ -91,4 +112,5 @@ void main() {
     boolean_examples();
     if_examples();
     loop_examples();
+    switch_example();
 }
