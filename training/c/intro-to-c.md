@@ -88,6 +88,17 @@ checking if something is finished, etc).
 - This flexibility allows for powerful manipulations of values, such using `char var = 'a'` then using arithmetic to change the letter, such as `var++`.
 - The type simply describes how to take the value in memory and interpret it. For example, all the if statements testing for true or false are really testing for a non-zero value (true) or a zero value (false)
 
+### Binary and Hexadecimal
+
+- Numbering comes in many representations, decimal uses 10 symbols to represent values, binary uses 2, and hexadecimal uses 16. Others exist, like the seldomly used octal (where 8 symbols are used) and so on. 
+- Any number can be converted to another representation with the proper math. 
+- As a quick reminder: decimal works like this, 
+
+   - Each column in a number is (n x 10^i) where n in the symbol (like 8 or 2) and i is the index of the column (such as the 0th or 7th). Thus a number like 764 is (7 x 10^2) + (6 * 
+10^1) + (4 x 10^0)
+   - Binary works like this but uses two symbols instead, 0 and 1, so the number values are (n x 2^i). Thus 10010 is (1 x 2^4) + 0 + 0 + (1 x 2^1) = 18. To convert from decimal to binary, simply deduct the highet possible powers of two and keep track of which values in binary are taken. For example, for 18, 16 is the highest power of two leaving 2. You can not deduct 8 or 4 but you can deduct 2. What is left over is 0, so 10010.
+   - Hexadecimal is also similar but uses 16 symbols (0-9, A-F) to represent numbers. Converting binary to hex is straight forward: 1 is 0001, 2 is 0010, 3 is 0011, 4 is 0100, ... 9 is 1001, A is 1010, B is 1011, C is 1100, D is 1101, E is 1110, and F is 1111. Note the pattern! Converting decimal to hex is made simple by first converting to binary. 
+
 ### Bitwise Arithmetic
 
 - Because we have access to the raw values in memory, we can interact with the values at the bit level.
