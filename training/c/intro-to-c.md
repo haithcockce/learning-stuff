@@ -101,6 +101,13 @@ checking if something is finished, etc).
 
 ### Bitwise Arithmetic
 
+- _Bit_ a 0 or 1. 
+- _Nibble_ 4 bits
+- _Byte_ 8 bites
+- _Word_ 16 bits (2 bytes)
+- _Double Word_ 32 bits (4 bytes)
+- _Quad word_ 64 bits (8 bytes)
+
 - Because we have access to the raw values in memory, we can interact with the values at the bit level.
 
    - `x & y` x bitwise and with y, 1001 & 0101 => 0001
@@ -108,3 +115,37 @@ checking if something is finished, etc).
    - `x ^ y` x bitwise exclusive or with y, 1001 ^ 0101 => 1100
    - `~x` bitwise negation of x, ~1001 => 0110
    - `x >> y`/`x << y` bitshift x right/left by y amount of bits, 0101 >> 2 => 0001, 0101 << 2 => 0100
+
+      - For unsigned values, right shifting pads with 0's since we do not care about the negative or positive value
+      - For signed values, right shifting pads with the value of the left-most bit to preserve the sign (pad with 0's if positive, pad with 1's if negative)
+
+- Negative values are denoted by the left most bit being set to 1. If the value is unsigned, then the number does not have a negative sign regardless of the left most bit. 
+
+### C "Types" and Implications
+
+- Types only define how many bytes are used to represent the value and how to interpret the value. For example, a variable may be of type `int`, it can be interpreted as a letter, a decimal value, just the bits itself, etc without changing the value itself. 
+- Because the types define the amount of bytes used to represent the values, the sizes are static and remain unchanged. Likewise, the limits of the values are dependent on how many bits can be used to represent that number. For example, `char` is typically a single byte and can thus only represent 0 to 255 (unsigned) or -128 to 127 (signed)
+- _Overflow_ / _Underflow_ when modifications to the values hit a limit and wrap around to the other limit. 
+
+   - Overflow example: An unsigned char has an upper limit of 255, represented as 11111111. Adding 1 to this would cause the number to overflow to 00000000. Without the limits, the number would equal 100000000, but this requires 9 bit to represent the value. The additional 1 is dropped due to the limitations. 
+   - Underflow example: similarly, with an unsigned char whose value is 00000000, if 1 is subtracted from it, this would cause the value to become 11111111
+
+## Pointers 
+
+- When something is in memory, that thing resides within a specific location of memory. That specific location can be described with an address. 
+
+   - Humans use addresses to describe where we live. 276 Example Ln. Townsville, California, 50505 for example.
+
+- _Pointer_ is an address that references something in memory. 
+
+   - The 276 Example Ln. address would be a pointer to someone's house
+
+- _Dereference_ Means to go to the location in memory described by a pointer and use the contents therein. 
+
+   - Dereferencing the 276 Example Ln. address would mean traveling to that house and going inside 
+
+- Pointers are nothing more than addresses which are just numbers (typically in hexadecimal) that can be manipulated like any other number. Pointers can thus be modified to point to different areas of memory!
+
+   - We can increment 276 Example Ln. by + 2 which gives 278 Example Ln., the neighbor to 276!
+
+

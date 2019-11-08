@@ -10,7 +10,7 @@ void print_interpretations() {
     printf("f = 65.5 Various representations:\n");
     char c = (char) f;
     int i = (int) f;
-    printf("char: %c, %d, %x, %f\n", c, i, f, f);
+    printf("char: %c, integer: %d, hexadecimal: 0x%x, floating point: %f\n", c, i, f, f);
 }
 
 void print_bitwise_arithmetic() {
@@ -24,7 +24,10 @@ void print_bitwise_arithmetic() {
     printf("j << 2 =0x%x\n", (j<<2));
     printf("j >> 2 = 0x%x\n", (j>>2));
     printf("(~i) << 2 = 0x%x\n", ((~i)<<2));
-    printf("(~i) >> 2 = 0x%x\n", ((~i)>>2));
+    printf("signed   (~i) >> 2 = 0x%x\n", ((~i)>>2));
+    printf("unsigned (~i) >> 2 = 0x%x\n", ((unsigned) (~i))>>2);
+    printf("i - 1 = 0x%x\n", ((unsigned int) i) - 1);
+    printf("(~i) + 1 = 0x%x\n", ((~i)+1));
 }
 
 void print_sizes() {
