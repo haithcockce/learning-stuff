@@ -5,18 +5,27 @@
 ### Overview
 
 - _Source_ typically refers to the code itself
+- _Comment_ Code that the system ignores and is typically used to communicate to other humans
 - _Compile_ translate human-readable source code into machine-readable binary to run
 - _Executable_ a file of raw binary code typically made from compiled source code which is loaded into memory and ran
 - _Expression_ like math, some logic that, when executed, has some sort of result, like 1 + 2 is an expression that results in 3
 - _Variable_ something that represents a value. Like in math, x = 2, x is the variable whose value is 2.
+   - _Declaration_ tells the compiler you have a variable with a particular name and it will have a specific type. Thus code compiled will interact with that variable as defined by the type
+   - _Instantiation_ The act of act of actually allocating memory for the variable
+      - _Instance_ A specific existence of an object
+   - _Initialization_ The act of providing specific values to a variable
 - _Function_ a series of lines of code that, when executed, performs some objective
 - _Parameter_ the value provided to a variable going into a function. For example, with the pythagorean theorem, a^2 + b^2 = c^2 is the function, and you can provide a = 1 and b = 2.
 - _Return value_ what you expect a function to give to you when it finishes. For example, 1^2 + 2^2, the return value would be 5
 - _Library_ source code already written elsewhere but imported into your code. Referred to as packages in Java, modules in Python, etc
 - _Type_ what kind of object is it? Is it a number? Is it a string? Is it something else?
+- _Primative_ a type provided from the language itself (like `int` or `char` or `long`, etc) that typically does not have multiple components
+- _Object_ Generically speaking, is an entity with multiple components (like an address has a house number, street name, zip code, city, state, etc)
 
 C-Specific stuff
 
+- _Struct_ A definition or instance of a structure with one or more components
+- _Member_ one of the components of a struct
 - _Function Prototype_ defines how you interact with a function such as what it is called, what parameters, if any, need to be provided and what type are the parameters, and what the function is supposed to return, if anything, and what type the return value is.
 
 ## Operators
@@ -90,14 +99,14 @@ checking if something is finished, etc).
 
 ### Binary and Hexadecimal
 
-- Numbering comes in many representations, decimal uses 10 symbols to represent values, binary uses 2, and hexadecimal uses 16. Others exist, like the seldomly used octal (where 8 symbols are used) and so on. 
-- Any number can be converted to another representation with the proper math. 
-- As a quick reminder: decimal works like this, 
+- Numbering comes in many representations, decimal uses 10 symbols to represent values, binary uses 2, and hexadecimal uses 16. Others exist, like the seldomly used octal (where 8 symbols are used) and so on.
+- Any number can be converted to another representation with the proper math.
+- As a quick reminder: decimal works like this,
 
-   - Each column in a number is (n x 10^i) where n in the symbol (like 8 or 2) and i is the index of the column (such as the 0th or 7th). Thus a number like 764 is (7 x 10^2) + (6 * 
+   - Each column in a number is (n x 10^i) where n in the symbol (like 8 or 2) and i is the index of the column (such as the 0th or 7th). Thus a number like 764 is (7 x 10^2) + (6 *
 10^1) + (4 x 10^0)
    - Binary works like this but uses two symbols instead, 0 and 1, so the number values are (n x 2^i). Thus 10010 is (1 x 2^4) + 0 + 0 + (1 x 2^1) = 18. To convert from decimal to binary, simply deduct the highet possible powers of two and keep track of which values in binary are taken. For example, for 18, 16 is the highest power of two leaving 2. You can not deduct 8 or 4 but you can deduct 2. What is left over is 0, so 10010.
-   - Hexadecimal is also similar but uses 16 symbols (0-9, A-F) to represent numbers. Converting binary to hex is straight forward: 1 is 0001, 2 is 0010, 3 is 0011, 4 is 0100, ... 9 is 1001, A is 1010, B is 1011, C is 1100, D is 1101, E is 1110, and F is 1111. Note the pattern! Converting decimal to hex is made simple by first converting to binary. 
+   - Hexadecimal is also similar but uses 16 symbols (0-9, A-F) to represent numbers. Converting binary to hex is straight forward: 1 is 0001, 2 is 0010, 3 is 0011, 4 is 0100, ... 9 is 1001, A is 1010, B is 1011, C is 1100, D is 1101, E is 1110, and F is 1111. Note the pattern! Converting decimal to hex is made simple by first converting to binary.
 
 - Binary/Decimal/Hex Conversion Chart
 
@@ -122,7 +131,7 @@ checking if something is finished, etc).
 
 ### Bitwise Arithmetic
 
-- _Bit_ a 0 or 1. 
+- _Bit_ a 0 or 1.
 - _Nibble_ 4 bits
 - _Byte_ 8 bites
 - _Word_ 16 bits (2 bytes)
@@ -140,33 +149,33 @@ checking if something is finished, etc).
       - For unsigned values, right shifting pads with 0's since we do not care about the negative or positive value
       - For signed values, right shifting pads with the value of the left-most bit to preserve the sign (pad with 0's if positive, pad with 1's if negative)
 
-- Negative values are denoted by the left most bit being set to 1. If the value is unsigned, then the number does not have a negative sign regardless of the left most bit. 
+- Negative values are denoted by the left most bit being set to 1. If the value is unsigned, then the number does not have a negative sign regardless of the left most bit.
 
 ### C "Types" and Implications
 
-- Types only define how many bytes are used to represent the value and how to interpret the value. For example, a variable may be of type `int`, it can be interpreted as a letter, a decimal value, just the bits itself, etc without changing the value itself. 
+- Types only define how many bytes are used to represent the value and how to interpret the value. For example, a variable may be of type `int`, it can be interpreted as a letter, a decimal value, just the bits itself, etc without changing the value itself.
 - Because the types define the amount of bytes used to represent the values, the sizes are static and remain unchanged. Likewise, the limits of the values are dependent on how many bits can be used to represent that number. For example, `char` is typically a single byte and can thus only represent 0 to 255 (unsigned) or -128 to 127 (signed)
-- _Overflow_ / _Underflow_ when modifications to the values hit a limit and wrap around to the other limit. 
+- _Overflow_ / _Underflow_ when modifications to the values hit a limit and wrap around to the other limit.
 
-   - Overflow example: An unsigned char has an upper limit of 255, represented as 11111111. Adding 1 to this would cause the number to overflow to 00000000. Without the limits, the number would equal 100000000, but this requires 9 bit to represent the value. The additional 1 is dropped due to the limitations. 
+   - Overflow example: An unsigned char has an upper limit of 255, represented as 11111111. Adding 1 to this would cause the number to overflow to 00000000. Without the limits, the number would equal 100000000, but this requires 9 bit to represent the value. The additional 1 is dropped due to the limitations.
    - Underflow example: similarly, with an unsigned char whose value is 00000000, if 1 is subtracted from it, this would cause the value to become 11111111
 
-## Pointers 
+## Pointers
 
-- When something is in memory, that thing resides within a specific location of memory. That specific location can be described with an address. 
+- When something is in memory, that thing resides within a specific location of memory. That specific location can be described with an address.
 
    - Humans use addresses to describe where we live. 276 Example Ln. Townsville, California, 50505 for example.
 
-- _Pointer_ is an address that references something in memory. 
+- _Pointer_ is an address that references something in memory.
 
    - The 276 Example Ln. address would be a pointer to someone's house
 
-- _Dereference_ Means to go to the location in memory described by a pointer and use the contents therein. 
+- _Dereference_ Means to go to the location in memory described by a pointer and use the contents therein.
 
-   - Dereferencing the 276 Example Ln. address would mean traveling to that house and going inside 
+   - Dereferencing the 276 Example Ln. address would mean traveling to that house and going inside
 
 - Pointers are nothing more than addresses which are just numbers (typically in hexadecimal) that can be manipulated like any other number. Pointers can thus be modified to point to different areas of memory!
 
    - We can increment 276 Example Ln. by + 2 which gives 278 Example Ln., the neighbor to 276!
 
-
+- For pointers to structs, the pointer
