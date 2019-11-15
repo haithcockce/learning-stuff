@@ -85,9 +85,9 @@ checking if something is finished, etc).
       - `while` loop, only defines the conditions in which the loop continues to be repeatedly executed.
          - `do-while` loop, similar to a while loop except we test the stop conditions after loop execution instead of before.
    - Switch statements are akin to a fairly sophisticated if-else if-else lattice.
-      - An expression is evaluated (the switch), and each case is evaluated until terminated
+      - An expression is evaluated (the switch), and each case is evaluated until terminated or a case is true 
       - Cases can contain optional `break` statements to terminate the switch-case block if the case is executed
-      - If a case is executed and does not have a break, then the remainder of the cases will continue to be evaluated
+      - If a case is executed and does not have a break, then the remainder of the body of the cases will be executed until a break occurs or the end of the switch-case block
       - The case series can contain a single, optional `default` case which will execute in any scenario if the evaluations are not terminated early (such as with `break`, `return`, `goto`, etc)
 
 ## Bits and Bytes
