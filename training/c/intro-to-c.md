@@ -99,6 +99,27 @@ checking if something is finished, etc).
    - Binary works like this but uses two symbols instead, 0 and 1, so the number values are (n x 2^i). Thus 10010 is (1 x 2^4) + 0 + 0 + (1 x 2^1) = 18. To convert from decimal to binary, simply deduct the highet possible powers of two and keep track of which values in binary are taken. For example, for 18, 16 is the highest power of two leaving 2. You can not deduct 8 or 4 but you can deduct 2. What is left over is 0, so 10010.
    - Hexadecimal is also similar but uses 16 symbols (0-9, A-F) to represent numbers. Converting binary to hex is straight forward: 1 is 0001, 2 is 0010, 3 is 0011, 4 is 0100, ... 9 is 1001, A is 1010, B is 1011, C is 1100, D is 1101, E is 1110, and F is 1111. Note the pattern! Converting decimal to hex is made simple by first converting to binary. 
 
+- Binary/Decimal/Hex Conversion Chart
+
+```
+0000  0   0
+0001  1   1
+0010  2   2
+0011  3   3
+0100  4   4
+0101  5   5
+0110  6   6
+0111  7   7
+1000  8   8
+1001  9   9
+1010  10  A
+1011  11  B
+1100  12  C
+1101  13  D
+1110  14  E
+1111  15  F
+```
+
 ### Bitwise Arithmetic
 
 - _Bit_ a 0 or 1. 
