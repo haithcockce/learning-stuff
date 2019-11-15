@@ -84,6 +84,7 @@ checking if something is finished, etc).
       - `for` loop, allows a starting condition to be defined, what conditions do we continue to repeat the code, and what to do for the loop specifically with each iteration of the loop execution.
       - `while` loop, only defines the conditions in which the loop continues to be repeatedly executed.
          - `do-while` loop, similar to a while loop except we test the stop conditions after loop execution instead of before.
+      - `continue` stops execution of the current iteration of a loop and proceeds to the next iteration immediately. Similar to `break` except `break` stops execution of the current iteration and falls out of the loop whereas `continue` stops execution of the current iteration of the loop and begins the next iteration immediately 
    - Switch statements are akin to a fairly sophisticated if-else if-else lattice.
       - An expression is evaluated (the switch), and each case is evaluated until terminated or a case is true 
       - Cases can contain optional `break` statements to terminate the switch-case block if the case is executed
