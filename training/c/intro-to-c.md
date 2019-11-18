@@ -19,6 +19,7 @@
 - _Return value_ what you expect a function to give to you when it finishes. For example, 1^2 + 2^2, the return value would be 5
 - _Library_ source code already written elsewhere but imported into your code. Referred to as packages in Java, modules in Python, etc
 - _Type_ what kind of object is it? Is it a number? Is it a string? Is it something else?
+- _Cast_ convert an object or thing from one type to another
 - _Primative_ a type provided from the language itself (like `int` or `char` or `long`, etc) that typically does not have multiple components
 - _Object_ Generically speaking, is an entity with multiple components (like an address has a house number, street name, zip code, city, state, etc)
 
@@ -84,9 +85,9 @@ checking if something is finished, etc).
       - `for` loop, allows a starting condition to be defined, what conditions do we continue to repeat the code, and what to do for the loop specifically with each iteration of the loop execution.
       - `while` loop, only defines the conditions in which the loop continues to be repeatedly executed.
          - `do-while` loop, similar to a while loop except we test the stop conditions after loop execution instead of before.
-      - `continue` stops execution of the current iteration of a loop and proceeds to the next iteration immediately. Similar to `break` except `break` stops execution of the current iteration and falls out of the loop whereas `continue` stops execution of the current iteration of the loop and begins the next iteration immediately 
+      - `continue` stops execution of the current iteration of a loop and proceeds to the next iteration immediately. Similar to `break` except `break` stops execution of the current iteration and falls out of the loop whereas `continue` stops execution of the current iteration of the loop and begins the next iteration immediately
    - Switch statements are akin to a fairly sophisticated if-else if-else lattice.
-      - An expression is evaluated (the switch), and each case is evaluated until terminated or a case is true 
+      - An expression is evaluated (the switch), and each case is evaluated until terminated or a case is true
       - Cases can contain optional `break` statements to terminate the switch-case block if the case is executed
       - If a case is executed and does not have a break, then the remainder of the body of the cases will be executed until a break occurs or the end of the switch-case block
       - The case series can contain a single, optional `default` case which will execute in any scenario if the evaluations are not terminated early (such as with `break`, `return`, `goto`, etc)
@@ -149,8 +150,26 @@ checking if something is finished, etc).
 
       - For unsigned values, right shifting pads with 0's since we do not care about the negative or positive value
       - For signed values, right shifting pads with the value of the left-most bit to preserve the sign (pad with 0's if positive, pad with 1's if negative)
+      - For left-shifting, numbers will always be padded with 0. 
 
-- Negative values are denoted by the left most bit being set to 1. If the value is unsigned, then the number does not have a negative sign regardless of the left most bit.
+#### One's and two's compliment 
+
+- One's and two's compliment is a variation on binary to represent negative numbers where the one's/two's compliment is the negative representation of the number
+- For one's compliment, a negative number is simply an inversion (bitwise negation) of the bits. 
+   
+   - IE 2 is `0010` in binary where the one's compliment is `1101` and thus -2.
+   - This allows for a positive 0 (`0000`) and negative 0 (`1111`). 
+
+- Two's compliment is an extension of one's compliment and used in common hardware. 
+
+   - The two's compliment (or negative) version of a binary number is first bitwise negated (similar to one's compliment) and then 1 is added.
+   - IE 2 is `0010` and -2 is `1110`. First, invert the bits (`0010 => 1101`) and then add 1 (`1101 => 1110`)
+   - This means the two's compliment of 0 is the same as regular. 0 is `0000`, invert it (`1111`), add 1 (`0000`). 
+   - Converting from negative to positive is the same:
+
+      - -2 is `1110`, invert (`0001`), add 1 (`0010`). 
+
+- As a rule of thumb, a value with a 1 in the most significant bit (left most spot) is negative when signed. This does not apply when the value is unsigned or not used to represent a number (for example it could represent an ascii character or address).
 
 ### C "Types" and Implications
 
@@ -158,8 +177,13 @@ checking if something is finished, etc).
 - Because the types define the amount of bytes used to represent the values, the sizes are static and remain unchanged. Likewise, the limits of the values are dependent on how many bits can be used to represent that number. For example, `char` is typically a single byte and can thus only represent 0 to 255 (unsigned) or -128 to 127 (signed)
 - _Overflow_ / _Underflow_ when modifications to the values hit a limit and wrap around to the other limit.
 
-   - Overflow example: An unsigned char has an upper limit of 255, represented as 11111111. Adding 1 to this would cause the number to overflow to 00000000. Without the limits, the number would equal 100000000, but this requires 9 bit to represent the value. The additional 1 is dropped due to the limitations.
-   - Underflow example: similarly, with an unsigned char whose value is 00000000, if 1 is subtracted from it, this would cause the value to become 11111111
+   - Overflow example: An unsigned char has an upper limit of 255, represented as 11111111. Adding 1 to this would cause the number to overflow to 00000000. Without the limits, the number would equal 100000000, but this requires 9 bits to represent the value. The additional 1 is dropped due to the limitations.
+   - Underflow example: similarly, with an unsigned char whose value is 00000000, if 1 is subtracted from it, this would cause the value to become 11111111. If the number is unsigned, then the number wraps from 0 to 255 via subtraction. This is underflow. 
+
+- _Truncation_ occurs when a value is cast to a type that has fewer bits to represent it. On casting, the value changes based on the bits available and what what you cast from and to. 
+
+   - Casting a decimal number (like `float` or `double`) to a whole number type (like `int` or `long`) will drop the decimal and nothing more if the new type can represent the the value. 
+   - For most other casts (such as `int` to `char` or similar), the most significant (left-most) bits are dropped and the least significant (right-most) bits are kept in the conversion.
 
 ## Pointers
 
