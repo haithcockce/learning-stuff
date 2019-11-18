@@ -187,6 +187,8 @@ checking if something is finished, etc).
 
 ## Pointers
 
+### Overview
+
 - When something is in memory, that thing resides within a specific location of memory. That specific location can be described with an address.
 
    - Humans use addresses to describe where we live. 276 Example Ln. Townsville, California, 50505 for example.
@@ -203,4 +205,18 @@ checking if something is finished, etc).
 
    - We can increment 276 Example Ln. by + 2 which gives 278 Example Ln., the neighbor to 276!
 
-- For pointers to structs, the pointer
+- Any variable can have a pointer reference it. This implies a variable holding a pointer can have a pointer referencing that pointer. This pointer to a pointer is typically called a _handle_
+
+   - The location of someone in your contact list in your phone or the address book in the cabinet (what year is this?) is the location of the address which points to 276 Example Ln.
+
+- Again, because everything executing will reside in memory at a specific location, anything in memory can be referenced with pointers including functions. These kinds of pointers are known, unceremoniously, as _function pointers_.
+
+   - A function pointer would be like the page number in an instruction manual on how to build your new Ikea desk. 
+
+### Pointers in C
+
+- Interacting with pointers are designated with `*`, `&`, and `->`. 
+
+   - A pointer variable is declared with `*`: IE `int *i;`
+   - The address (or pointer) of a variable can be retrieved with `&`, IE `int *i = &j;`
+   - For structs, `->` is used to _dereference_ the address to go to that specific member in the struct and use the value therein. IE `struct student; student->name = "Charles";`
