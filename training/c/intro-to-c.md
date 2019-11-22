@@ -142,10 +142,10 @@ checking if something is finished, etc).
 
 - Because we have access to the raw values in memory, we can interact with the values at the bit level.
 
-   - `x & y` x bitwise and with y, 1001 & 0101 => 0001
-   - `x | y` x bitwise or with y, 1001 | 0101 => 1101
-   - `x ^ y` x bitwise exclusive or with y, 1001 ^ 0101 => 1100
-   - `~x` bitwise negation of x, ~1001 => 0110
+   - `x & y` x bitwise AND with y, 1001 & 0101 => 0001
+   - `x | y` x bitwise OR with y, 1001 | 0101 => 1101
+   - `x ^ y` x bitwise EXCLUSIVE OR with y, 1001 ^ 0101 => 1100
+   - `~x` bitwise NEGATION of x, ~1001 => 0110
    - `x >> y`/`x << y` bitshift x right/left by y amount of bits, 0101 >> 2 => 0001, 0101 << 2 => 0100
 
       - For unsigned values, right shifting pads with 0's since we do not care about the negative or positive value
