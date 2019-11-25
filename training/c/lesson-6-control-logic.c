@@ -84,6 +84,7 @@ void loop_examples() {
             goto exit_loopex;
         }
     }
+    printf("THIS WILL NEVER PRINT\n");
 exit_loopex:
     return;
 }
@@ -114,3 +115,4 @@ void main() {
     loop_examples();
     switch_example();
 }
+

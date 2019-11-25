@@ -67,6 +67,8 @@ checking if something is finished, etc).
 
 #### Boolean Operators
 
+# ADD BOOLEAN ARITHMETIC EXAMPLES TO CODE
+
 - `x || y` evaluates TRUE if x is TRUE _or_ y is TRUE
 - `x && y` evaluates TRUE if x is TRUE _and_ y is TRUE
 - `!x` negation (TRUE becomes FALSE and vice-versa, but no assignment)
@@ -93,6 +95,8 @@ checking if something is finished, etc).
       - The case series can contain a single, optional `default` case which will execute in any scenario if the evaluations are not terminated early (such as with `break`, `return`, `goto`, etc)
 
 ## Bits and Bytes
+
+# CRUNCH
 
 - While C has "types", the types are quite loosely defined in so much that execution of a program doesn't care if you have a variable declared as one type but used as another. You will have compilation warnings but that's all.
 - What defines types in C is the amount of memory used to hold the value in terms of bytes, which can be checked with `sizeof()`
