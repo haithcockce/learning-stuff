@@ -185,9 +185,29 @@ checking if something is finished, etc).
    - Casting a decimal number (like `float` or `double`) to a whole number type (like `int` or `long`) will drop the decimal and nothing more if the new type can represent the the value. 
    - For most other casts (such as `int` to `char` or similar), the most significant (left-most) bits are dropped and the least significant (right-most) bits are kept in the conversion.
 
-## Pointers
+# LEAST/MOST SIGNIFICANT BIT
 
-### Overview
+## Pointers And Memory
+
+### Memory Management Intro
+
+- During execution, every process has dedicated memory used for temporary and "permanent" things as its workspace. 
+- _Stack_ Memory where temporary things are stored. 
+
+   - Stacks are last in first out (LIFO) where the most recent used thing is "pushed" onto the top and when removing something, the item is popped from the top
+   - Think of a stack of trays at a cafeteria where you can put trays on a stack of trays and pull trays from the top of the stack. 
+   - When a function is called, the CPU moves to another area of the stack memory for that function. When returning, we remove move back to where we were at before in the stack. 
+   - Each of these areas of stack memory used exclusively for a new function call is called a stack frame. 
+   - When variables are created and used in a function, these are typically kept in the function's stack frame and disappear when we remove the stack frame on function return. You can not use them outside the function (for the most part) 
+   - Memory is managed automatically here and there's a finite size to the stack. 
+
+- _Heap_ Memory where more permanent things are stored. 
+
+   - Memory is not automatically managed here. As such, using this memory requires explicit function calls to manage memory here (`malloc`, `calloc`, to create memory and `free` to free the memory).
+   - The memory is persistent across function calls. As such, a function can allocate some memory from the heap and another function fill in the allocated memory while yet another frees the memory. 
+   - Mismanaged memory here can lead to memory fragmentation and memory leaks.
+
+### Pointer Overview
 
 - When something is in memory, that thing resides within a specific location of memory. That specific location can be described with an address.
 
@@ -220,3 +240,8 @@ checking if something is finished, etc).
    - A pointer variable is declared with `*`: IE `int *i;`
    - The address (or pointer) of a variable can be retrieved with `&`, IE `int *i = &j;`
    - For structs, `->` is used to _dereference_ the address to go to that specific member in the struct and use the value therein. IE `struct student; student->name = "Charles";`
+
+- _Pass by Value_ vs _Pass by Reference_ 
+
+   - _Pass by Value_ means a parameter to a function will be given a value or the value of a variable
+   - _Pass by Reference_ means a parameter to a function will be a pointer or reference to something else
