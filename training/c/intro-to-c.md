@@ -96,8 +96,6 @@ checking if something is finished, etc).
 
 ## Bits and Bytes
 
-# CRUNCH
-
 - While C has "types", the types are quite loosely defined in so much that execution of a program doesn't care if you have a variable declared as one type but used as another. You will have compilation warnings but that's all.
 - What defines types in C is the amount of memory used to hold the value in terms of bytes, which can be checked with `sizeof()`
 - This flexibility allows for powerful manipulations of values, such using `char var = 'a'` then using arithmetic to change the letter, such as `var++`.
@@ -154,24 +152,24 @@ checking if something is finished, etc).
 
       - For unsigned values, right shifting pads with 0's since we do not care about the negative or positive value
       - For signed values, right shifting pads with the value of the left-most bit to preserve the sign (pad with 0's if positive, pad with 1's if negative)
-      - For left-shifting, numbers will always be padded with 0. 
+      - For left-shifting, numbers will always be padded with 0.
 
-#### One's and two's compliment 
+#### One's and two's compliment
 
 - One's and two's compliment is a variation on binary to represent negative numbers where the one's/two's compliment is the negative representation of the number
-- For one's compliment, a negative number is simply an inversion (bitwise negation) of the bits. 
-   
-   - IE 2 is `0010` in binary where the one's compliment is `1101` and thus -2.
-   - This allows for a positive 0 (`0000`) and negative 0 (`1111`). 
+- For one's compliment, a negative number is simply an inversion (bitwise negation) of the bits.
 
-- Two's compliment is an extension of one's compliment and used in common hardware. 
+   - IE 2 is `0010` in binary where the one's compliment is `1101` and thus -2.
+   - This allows for a positive 0 (`0000`) and negative 0 (`1111`).
+
+- Two's compliment is an extension of one's compliment and used in common hardware.
 
    - The two's compliment (or negative) version of a binary number is first bitwise negated (similar to one's compliment) and then 1 is added.
    - IE 2 is `0010` and -2 is `1110`. First, invert the bits (`0010 => 1101`) and then add 1 (`1101 => 1110`)
-   - This means the two's compliment of 0 is the same as regular. 0 is `0000`, invert it (`1111`), add 1 (`0000`). 
+   - This means the two's compliment of 0 is the same as regular. 0 is `0000`, invert it (`1111`), add 1 (`0000`).
    - Converting from negative to positive is the same:
 
-      - -2 is `1110`, invert (`0001`), add 1 (`0010`). 
+      - -2 is `1110`, invert (`0001`), add 1 (`0010`).
 
 - As a rule of thumb, a value with a 1 in the most significant bit (left most spot) is negative when signed. This does not apply when the value is unsigned or not used to represent a number (for example it could represent an ascii character or address).
 
@@ -182,33 +180,35 @@ checking if something is finished, etc).
 - _Overflow_ / _Underflow_ when modifications to the values hit a limit and wrap around to the other limit.
 
    - Overflow example: An unsigned char has an upper limit of 255, represented as 11111111. Adding 1 to this would cause the number to overflow to 00000000. Without the limits, the number would equal 100000000, but this requires 9 bits to represent the value. The additional 1 is dropped due to the limitations.
-   - Underflow example: similarly, with an unsigned char whose value is 00000000, if 1 is subtracted from it, this would cause the value to become 11111111. If the number is unsigned, then the number wraps from 0 to 255 via subtraction. This is underflow. 
+   - Underflow example: similarly, with an unsigned char whose value is 00000000, if 1 is subtracted from it, this would cause the value to become 11111111. If the number is unsigned, then the number wraps from 0 to 255 via subtraction. This is underflow.
 
-- _Truncation_ occurs when a value is cast to a type that has fewer bits to represent it. On casting, the value changes based on the bits available and what what you cast from and to. 
+- _Truncation_ occurs when a value is cast to a type that has fewer bits to represent it. On casting, the value changes based on the bits available and what what you cast from and to.
 
-   - Casting a decimal number (like `float` or `double`) to a whole number type (like `int` or `long`) will drop the decimal and nothing more if the new type can represent the the value. 
+   - Casting a decimal number (like `float` or `double`) to a whole number type (like `int` or `long`) will drop the decimal and nothing more if the new type can represent the the value.
    - For most other casts (such as `int` to `char` or similar), the most significant (left-most) bits are dropped and the least significant (right-most) bits are kept in the conversion.
 
 # LEAST/MOST SIGNIFICANT BIT
+
+# CRUNCH
 
 ## Pointers And Memory
 
 ### Memory Management Intro
 
-- During execution, every process has dedicated memory used for temporary and "permanent" things as its workspace. 
-- _Stack_ Memory where temporary things are stored. 
+- During execution, every process has dedicated memory used for temporary and "permanent" things as its workspace.
+- _Stack_ Memory where temporary things are stored.
 
    - Stacks are last in first out (LIFO) where the most recent used thing is "pushed" onto the top and when removing something, the item is popped from the top
-   - Think of a stack of trays at a cafeteria where you can put trays on a stack of trays and pull trays from the top of the stack. 
-   - When a function is called, the CPU moves to another area of the stack memory for that function. When returning, we remove move back to where we were at before in the stack. 
-   - Each of these areas of stack memory used exclusively for a new function call is called a stack frame. 
-   - When variables are created and used in a function, these are typically kept in the function's stack frame and disappear when we remove the stack frame on function return. You can not use them outside the function (for the most part) 
-   - Memory is managed automatically here and there's a finite size to the stack. 
+   - Think of a stack of trays at a cafeteria where you can put trays on a stack of trays and pull trays from the top of the stack.
+   - When a function is called, the CPU moves to another area of the stack memory for that function. When returning, we remove move back to where we were at before in the stack.
+   - Each of these areas of stack memory used exclusively for a new function call is called a stack frame.
+   - When variables are created and used in a function, these are typically kept in the function's stack frame and disappear when we remove the stack frame on function return. You can not use them outside the function (for the most part)
+   - Memory is managed automatically here and there's a finite size to the stack.
 
-- _Heap_ Memory where more permanent things are stored. 
+- _Heap_ Memory where more permanent things are stored.
 
    - Memory is not automatically managed here. As such, using this memory requires explicit function calls to manage memory here (`malloc`, `calloc`, to create memory and `free` to free the memory).
-   - The memory is persistent across function calls. As such, a function can allocate some memory from the heap and another function fill in the allocated memory while yet another frees the memory. 
+   - The memory is persistent across function calls. As such, a function can allocate some memory from the heap and another function fill in the allocated memory while yet another frees the memory.
    - Mismanaged memory here can lead to memory fragmentation and memory leaks.
 
 ### Pointer Overview
@@ -235,17 +235,17 @@ checking if something is finished, etc).
 
 - Again, because everything executing will reside in memory at a specific location, anything in memory can be referenced with pointers including functions. These kinds of pointers are known, unceremoniously, as _function pointers_.
 
-   - A function pointer would be like the page number in an instruction manual on how to build your new Ikea desk. 
+   - A function pointer would be like the page number in an instruction manual on how to build your new Ikea desk.
 
 ### Pointers in C
 
-- Interacting with pointers are designated with `*`, `&`, and `->`. 
+- Interacting with pointers are designated with `*`, `&`, and `->`.
 
    - A pointer variable is declared with `*`: IE `int *i;`
    - The address (or pointer) of a variable can be retrieved with `&`, IE `int *i = &j;`
    - For structs, `->` is used to _dereference_ the address to go to that specific member in the struct and use the value therein. IE `struct student; student->name = "Charles";`
 
-- _Pass by Value_ vs _Pass by Reference_ 
+- _Pass by Value_ vs _Pass by Reference_
 
    - _Pass by Value_ means a parameter to a function will be given a value or the value of a variable
    - _Pass by Reference_ means a parameter to a function will be a pointer or reference to something else
