@@ -25,6 +25,7 @@ void main() {
 void pass_by_value(int i) {
     printf("Current value: %d\n", i);
     i = i * 2;
+    printf("NOW: %d\n", i);
 }
 
 void pass_by_reference(int *i) {
