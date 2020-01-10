@@ -29,18 +29,16 @@
 
 ###### How Perf Traces and Samples
 
-- The kernel exposes a variety of debugging subsystems via the pseudofilesystem, `debugfs`. Below are the important ones perf takes advantage of. 
+- The kernel exposes a variety of debugging subsystems via the pseudofilesystem, `debugfs`. Perf predominantly uses the `ftrace` functionality and `perf_events`
   - _Performance Counters for Linux_ CPUs have architecture specific registers which increment based on certain events occurring. 
     - AKA `perf_events` 
     - Think count of context switches.
-  - _Tracepoints_ predefined hooks in kernel code to call a function. 
+  - `ftrace` is the Function Tracer (thus the name) embedded in `debugfs` but does so much more than tracing functions. Ftrace relies on tracepoints
+    - _Tracepoints_ predefined static hooks in kernel code to call a function. 
     - _Probe_ The function called by the hook 
     - If a tracepoint is "on", then a probe is enabled. "Off" means the probe is disabled.
-  - _Events_ dynamic and custom defined tracepoints. 
-    - Custom defined functions can be called
-    - Uses kprobe (kernelspace probing). Uprobes (userspace probing) exists as well
-    - Think systemtap. 
-
+    - Output of the tracing is written to a pseudofile in `debugfs` to be consumed by another tool (or read with `cat` or `less`)
+  
 - Example code of a tracepoint in the kernel code: 
 
 ```c
@@ -73,7 +71,7 @@ less /sys/kernel/debug/tracing/trace                      # Check the output
 
 - Tracepoints are listed in `/sys/kernel/debug/tracing/available_events`
 - With the complexity of what can be traced, navigating the `debugfs` and setting up regex filters can be error prone and overall difficult. 
-- Perf deals with all of this!
+- Perf helps facilitate all of this!
 
 #### Events/Tracepoints/Counters in Perf
 
