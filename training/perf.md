@@ -4,9 +4,28 @@
 
 #### Intro
 
-- Low-level, low latency tracing and sampling of activity at the kernel and hardware level
+- Low-level, low-latency tracing and sampling of activity at the kernel and hardware level
 - Can get statistics on very specific things such as CPU Cache misses, branch mispredictions, etc
 - Can trace as well against specific pre-defined spots in the kernel or in custom spot in the kernel
+
+###### When to use perf
+
+- Investigating large kernelspace processing 
+  - Ex: "System performs slow" and during times of interest is elevated `%sys`
+- Investigating very brief performance issues
+  - Ex: "We have random latency spikes where latency in processing transactions on the CPUs/in memory goes from an expected 50us to 10ms or more"
+- Investigating highly specific kernel events that do not necessitate custom response behavior
+  - Ex: Determining what is causing a large number of involuntary faults
+
+
+- Extremely high resolution data set, can easily generate a large amount of data, and typically requires a well-defined target to investigate. Make sure perf is the right tool. 
+  - "Performance is slow" Perf may not capture anything useful, for example, if slowness is completely in %usr
+  - "Performance is slow and there is extremely high %sys" perf can trace kernel activity, so it will capture something. Is extremely high %sys expected? If not, then perf!
+  - "We have random latency spikes" Not well defined enough. Is the latency in IO activity? Latency in networking? Etc?
+  - "We have random latency spikes where latency in processing transactions on the CPUs/in memory goes from an expected 50us to 10ms or more" Handling interrupts, handling page faults, and handling scheduling activity will be the most common reasons for latency at that resolution of time especially when all activity is on CPUs/in memory. Perf can tell us when the processes are being interrupted and why. 
+  - "Certain processes are taking longer to perform the same thing on some system than others." If the performance data (collectl/pcp/sar) show similar metrics or nothing obvious, perf _could_ be used, but strace would be a more straightforward tool here, especially since we can not yet tell if the bulk of the time is in userspace or kernelspace processing. 
+  - "Certain processes are taking longer to perform the same thing on some system than others and it is all in one syscall" Here perf is perfect to use with the function tracer. Tons of overhead, but will tell us exactly what we are doing and where in the kernel for that syscall. 
+
 
 ###### How
 
