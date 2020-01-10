@@ -27,9 +27,9 @@
   - "Certain processes are taking longer to perform the same thing on some system than others and it is all in one syscall" Here perf is perfect to use with the function tracer. Tons of overhead, but will tell us exactly what we are doing and where in the kernel for that syscall. 
 
 
-###### How
+###### How Perf Traces and Samples
 
-- The kernel exposes a variety of subsystems via the pseudofilesystem, `debugfs`. 
+- The kernel exposes a variety of debugging subsystems via the pseudofilesystem, `debugfs`. Below are the important ones perf takes advantage of. 
   - _Performance Counters for Linux_ CPUs have architecture specific registers which increment based on certain events occurring. 
     - AKA `perf_events` 
     - Think count of context switches.
