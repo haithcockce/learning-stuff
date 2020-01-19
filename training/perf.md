@@ -52,14 +52,25 @@
 1199     trace_timer_expire_exit(timer);
 ```
 
-  - Line 1197: if the tracepoint is enabled, then we can trace specifically right before we call the function in a timer 
-  - Line 1198: the function being called in the timer
-  - Line 1199: if the tracepoint is enabled, then we can trace specifically immediately following the function called in a timer
-  - Note that the tracepoints for Line 1197 and 1199 are separate tracepoints. 
+    - Line 1197: if the tracepoint is enabled, then we can trace specifically right before we call the function in a timer 
+    - Line 1198: the function being called in the timer
+    - Line 1199: if the tracepoint is enabled, then we can trace specifically immediately following the function called in a timer
+    - Note that the tracepoints for Line 1197 and 1199 are separate tracepoints. 
+
+- Perf provides insight via analysis of samples 
+  - _Sampling_ is the action of recording observations of variables
+    - For example, when sampling coin flips, the coin is the variable because it can be heads or tails at any point, and a sample would be a coin flip result such as a coin flip resulting in heads.
+    - When you build a large enough _sample size_, or amount of observations, you can create statistics on the resulting data and predict probabilities on future observations. 
+    - For a contrived example, after 1,000,000 coin tosses, we could assess that the fairness of the coin is 0.5 (or 50% either heads or tails) and from that assess that, given the fairness of 0.5, the probability of getting heads next coin flip is 0.5 (or 50%). 
+  - When a tracepoint is hit or event is triggered that kicks off `perf_events`, then perf will record some data that it is configured to gather. 
+    - If we sample backtraces over and over, then we can build statistics on the function calls and which functions called which other functions. 
+    - For example, a perf recording of some process might show all instances of kernelspace processing start with `sys_open()`, however 80% of those opens lead to files in a filesystem being opened and the remaining 20% are network sockets being opened. Of that 80% of files opening, 70% of `sys_open()` calls open xfs files while 10% of `sys_open()` calls opened a procfs (`/proc`) file
+    - Perf is often configured to gather backtraces but can be configured to capture any number of things. 
+  - The sampling allows _statistical profiling_ of the application. In other words, by checking statistics of the samples, we can interpret trends and behaviors (such as if specific functions are called a lot or locks are contested a ton, why a process keeps getting kicked off a cpu, etc)
 
 ##### Interacting with `debugfs`
 
-- Most tracing can be enabled specifically by echoing values into `debugfs` entries. For example: 
+- Perf interacts with the `ftrace` infrastructure. Most tracing within `ftrace` can be enabled manually by echoing values into `debugfs` entries. For example: 
 
 ```bash
 echo function > /sys/kernel/debug/tracing/current_tracer  # Enable function tracing in kernel
@@ -73,11 +84,25 @@ less /sys/kernel/debug/tracing/trace                      # Check the output
 - With the complexity of what can be traced, navigating the `debugfs` and setting up regex filters can be error prone and overall difficult. 
 - Perf helps facilitate all of this!
 
-#### Events/Tracepoints/Counters in Perf
+##### Events/Tracepoints/Counters in Perf
 
-- `perf list` lists all tracepoints and counters possible. 
+- `perf list` lists all tracepoints and counters possible that perf can interact with
 - `perf probe` can add/list/remove dynamic events at specific points in a function, lines in source code, or elsewhere 
 
+#### General Profiling
+
+- Most of this will be pulled from [here](http://www.brendangregg.com/perf.html)
+- Profiling is most useful for times where trends in behavior need to be interpreted in the system or application but not much may be understood about the system or application's behavior. Example uses:
+  - "The system is performing poorly" and SAR shows fairly elevated %sys
+  - "Application runs slow but system is fine". SAR shows little, but collectl/pcp shows the application incurring higher %sys
+  - "Kworker threads are extremely active" 
+
+- Typical uses 
+
+  - `perf record -ag -- sleep N` record backtraces (`-g`) of all cpus (`-a`) at a regular frequency (`-F X` can change frequency to `X` HZ) for `N` seconds
+  - `perf record -g -t <TID> -F 99` record backtraces (`-g`) for the thread `<TID>` at a frequency of 99 HZ
+  - `perf record -e workqueue:workqueue_queue_work` record instances of work being queued to a workqueue from a process
+  
 ## Resources 
 
 - Tracepoints
