@@ -102,7 +102,118 @@ less /sys/kernel/debug/tracing/trace                      # Check the output
   - `perf record -ag -- sleep N` record backtraces (`-g`) of all cpus (`-a`) at a regular frequency (`-F X` can change frequency to `X` HZ) for `N` seconds
   - `perf record -g -t <TID> -F 99` record backtraces (`-g`) for the thread `<TID>` at a frequency of 99 HZ
   - `perf record -e workqueue:workqueue_queue_work` record instances of work being queued to a workqueue from a process
-  
+
+- Example from contrived workload: 
+
+```bash
+ r7 # for i in {1..8}; do dd if=/dev/urandom of=/dev/null & done
+[1] 24165
+[2] 24166
+[3] 24167
+[4] 24168
+[5] 24169
+[6] 24170
+[7] 24171
+[8] 24172
+
+ r7 # perf record -ag -- sleep 30
+[ perf record: Woken up 112 times to write data ]
+[ perf record: Captured and wrote 28.475 MB perf.data (240077 samples) ]
+
+ r7 # perf archive
+Now please run:
+
+$ tar xvf perf.data.tar.bz2 -C ~/.debug
+
+wherever you need to run 'perf report' on.
+
+ r7 # tar -xf perf.data.tar.bz2 -C ~/.debug
+ r7 # perf report --stdio --sort overhead_sys,comm --show-cpu-utilization
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 240K of event 'cpu-clock'
+# Event count (approx.): 60002000000
+#
+# Children      Self       sys       usr  Command       
+# ........  ........  ........  ........  ..............
+#
+    99.86%    99.86%    78.00%    21.86%  dd            
+            |          
+            |--78.17%--__GI___libc_read
+            |          |          
+            |           --70.67%--system_call
+            |                     |          
+            |                      --68.70%--sys_read
+            |                                |          
+            |                                 --68.02%--vfs_read
+            |                                           |          
+            |                                           |--64.81%--urandom_read
+            |                                           |          |          
+            |                                           |          |--51.82%--extract_crng
+            |                                           |          |          |          
+            |                                           |          |           --51.25%--_extra
+            |                                           |          |                     |     
+            |                                           |          |                      --50.
+            |                                           |          |          
+            |                                           |          |--9.93%--crng_backtrack_pro
+            |                                           |          |          |          
+            |                                           |          |           --9.82%--_crng_b
+            |                                           |          |                     |     
+            |                                           |          |                      --9.3
+```
+
+- Contrast the above to a `perf record` during idle times: 
+
+```bash
+ r7 # perf record -ag -o perf.data.idle -- sleep 30
+[ perf record: Woken up 32 times to write data ]
+[ perf record: Captured and wrote 8.150 MB perf.data.idle (69202 samples) ]
+ r7 # perf report --stdio --sort overhead_sys,comm --show-cpu-utilization -i perf.data.idle
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 69K of event 'cpu-clock'
+# Event count (approx.): 17300500000
+#
+# Children      Self       sys       usr  Command     
+# ........  ........  ........  ........  ............
+#
+    99.06%    99.06%    99.06%     0.00%  swapper     
+            |
+            ---start_cpu
+               |          
+               |--70.40%--start_secondary
+               |          cpu_startup_entry
+               |          |          
+               |           --70.40%--arch_cpu_idle
+               |                     |          
+               |                      --70.40%--default_idle
+               |                                |          
+               |                                 --70.39%--native_safe_halt
+               |          
+                --28.66%--x86_64_start_kernel
+                          x86_64_start_reservations
+                          start_kernel
+                          rest_init
+                          cpu_startup_entry
+                          |          
+                           --28.65%--arch_cpu_idle
+                                     default_idle
+                                     |          
+                                      --28.63%--native_safe_halt
+
+     0.47%     0.47%     0.32%     0.15%  pmdaproc    
+     0.12%     0.12%     0.08%     0.04%  pmdalinux   
+     0.11%     0.11%     0.11%     0.00%  perf        
+     0.06%     0.06%     0.06%     0.00%  kworker/0:2 
+     0.04%     0.04%     0.04%     0.01%  cgrulesengd 
+```
+
 ## Resources 
 
 - Tracepoints
