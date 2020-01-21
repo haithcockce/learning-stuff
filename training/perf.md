@@ -211,8 +211,21 @@ wherever you need to run 'perf report' on.
      0.12%     0.12%     0.08%     0.04%  pmdalinux   
      0.11%     0.11%     0.11%     0.00%  perf        
      0.06%     0.06%     0.06%     0.00%  kworker/0:2 
-     0.04%     0.04%     0.04%     0.01%  cgrulesengd 
+     0.04%     0.04%     0.04%     0.01%  cgrulesengd
 ```
+
+- Breadown of what is observed. 
+  - To synthesize a load to produce interesting data, several `dd` commands are fored to the background to churn on the CPUs. From there, `perf record` begins recording. It grabs the backtraces (`-g`) of processes running on all CPUs (`-a`). It records while the `sleep 30` command is executing. Note, this command is arbitrary and optional. If a command is provided, then perf will record while the command is executing and finish recording when the command finishes. 
+  - Perf will create a per-cpu buffer to write events to which are later on picked up by perf. In both, we see `Total Lost Samples: 0` meaning all events were recorded and captured. Sometimes, depending on activity and what is being recorded, you can lose samples because the events happen at a frequency which fills the buffers faster than perf can handle them. Here, we lost no samples of events.
+  - Next we see `Samples: 240K of event 'cpu-clock'`, which indicates the event being monitored and the count of times that event fired. `cpu-clock` is a per-cpu event which performs regular time keeping and happens extremely frequently. 
+  - `Event count (approx.): 17300500000` means, approximately, 17300500000 events fired while recording. This would be summed across all events being monitored. 
+  - The interesting stuff is next! Perf breaksdown a bactrace into `self`, or the function we are looking at currently, and `children`, or functions called by the one we are looking at. For example, in the busy perf data, when looing at `68.70%--sys_read`, the `sys_read` is "self" while the function it calls, `vfs_read` is the "child" function. 
+  - The "Children" and "Self" numbers are typically the same and indicate the percentage of all samples the process is a part of. So for the busy perf data, `dd` is in 99.86% of all samples recorded. In the idle perf data, `swapper` is in 99.06% of all samples while `pmdaproc` is in 0.47% of all samples. 
+  - `sys` and `usr` is the percentage of samples a process was executing in kernelspace or userspace respectively and should sum to `self`. For the busy perf data, 78% of all samples were `dd` processes in kernelspace execution whereas 21.86% of all samples are `dd` processes in userspace execution. 
+  - The next parts are regarding the call graph (all bactraces seen in the perf data organized as a tree). For example, in the idle perf data, `swapper` always calls `start_cpu` which calls `cpu_startup_entry` then `start_secondary` in 70.40% of all samples in the data while `start_cpu` branches instead to `cpu_startup_entry` -> `rest_init` -> `start_kernel` -> `x86_64_start_reservations` -> `x86_64_start_kernel` in 28.66% of all samples. 
+  - As a reminder, perf is recording events and doing sample-based metric reporting. This creates a square-rectangle scenario where high `%sys` in SAR/collectl/pcp would mean tons of samples of execution in kernelspace in perf data while high `%sys` in perf does not mean high `%sys` in SAR/collectl/pcp. For example, above, `swapper` is a kernelspace thread which idles a CPU. If a system is idle, then a ton of samples will be in kernelspace processing but due to `swapper` idling CPUs. 
+  - When using perf like this, check for areas where the kernelspace processing is concentrated in the same functions or bactraces. In the busy perf data, over 60% of all samples are `dd` attempting to read `/dev/urandom`. If the application was something else and the chief complaint is performance issues with that application, then the application vendor would need to investigate why it is reading from `/dev/urandom` so much. 
+  - Alternatively, bactraces can start in a variety of places but all end in the same set of functions. Take for example updating inodes in a filesystem. If a wide variety of operations are occurring on the same inode (read, write, truncate, close, unlink, etc) you could have a wide variety of starting points for the bactraces but they could end up grinding behind the same lock for the same inode. 
 
 ## Resources 
 
