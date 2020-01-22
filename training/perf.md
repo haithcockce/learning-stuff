@@ -247,6 +247,7 @@ dma_fence.h         intel_ish.h  mmc.h      regmap.h     task.h
 ext3.h              intel-sst.h  module.h   regulator.h  thp.h
 ext4.h              iommu.h      napi.h     rpcrdma.h    timer.h
 ```
+
 - For example, if unsure about what is printed when tracing `timer_expire_entry` events, below is the implementation: 
 
 ```c
@@ -309,7 +310,9 @@ ext4.h              iommu.h      napi.h     rpcrdma.h    timer.h
      1.47%  timer=0xffff9c5e19a7fd60 function=process_timeout now=4470243900
 ```
 
-- An example usage of static tracepoints would be when a customer notes elevated load average but no interesting CPU usage or blocked task count metrics. Typically, elevated load averages with no interesting CPU usage and low blocked task counts can be attributed to intermittent forking of children processes. 
+##### Example Usage: Load average but no blocked or running tasks
+
+- An example usage in support of static tracepoints would be when a customer notes elevated load average but no interesting CPU usage or blocked task count metrics. Typically, elevated load averages with no interesting CPU usage and low blocked task counts can be attributed to intermittent forking of children processes. 
 - Perf can enable a tracepoint near where a new process is created in the kernel to show what is being forked so much. 
 ```bash
  r7 # ps | grep bash  # grab the PID of the bash process where we will synthesize load
@@ -353,6 +356,62 @@ PID/TID switch overriding SYSTEM
 ```
 
 - Unsurprisingly, the forking is resulting in a ton of `ls` commands running and a few `sleep` commands. This matches the synthesized load. 
+
+##### Example: `kworker` threads running wild
+
+- In some instances, kworker threads can become extremely active. As a small primer on kworker threads, these threads are responsible for carrying out deferred work queued into the workqueues by other entities. Think similar behavior of interrupts but they run in a process at some later point in a kworker process. 
+- If a kworker thread is extremely active, we can trace what is being queued into the workqueues and assess where the work may be coming from. 
+
+```bash
+ r7 # perf record -e workqueue:workqueue_queue_work -a -- sleep 60
+[ perf record: Woken up 1 times to write data ]
+[ perf record: Captured and wrote 0.475 MB perf.data (1005 samples) ]
+ r7 # perf report --stdio | head -20
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 1K of event 'workqueue:workqueue_queue_work'
+# Event count (approx.): 1005
+#
+# Overhead  Trace output                                                                                                          
+# ........  ......................................................................................................................
+#
+    36.92%  work struct=0xffff9c5e18d93600 function=flush_to_ldisc workqueue=0xffff9c5e3d10e000 req_cpu=5120 cpu=1
+    18.11%  work struct=0xffff9c5e18d93600 function=flush_to_ldisc workqueue=0xffff9c5e3d10e000 req_cpu=5120 cpu=0
+     5.97%  work struct=0xffffffffb8e5df40 function=sync_cmos_clock workqueue=0xffff9c5e3d10e000 req_cpu=5120 cpu=0
+     5.47%  work struct=0xffffffffb8e9a280 function=vmstat_shepherd workqueue=0xffff9c5e3d10e000 req_cpu=5120 cpu=1
+     4.68%  work struct=0xffff9c5e18d93000 function=flush_to_ldisc workqueue=0xffff9c5e3d10e000 req_cpu=5120 cpu=0
+     3.38%  work struct=0xffff9c5e3fd17de0 function=vmstat_update workqueue=0xffff9c5e3d10e000 req_cpu=5120 cpu=1
+     2.89%  work struct=0xffff9c5df66f6060 function=disk_events_workfn workqueue=0xffff9c5e3d10e800 req_cpu=5120 cpu=0
+     2.89%  work struct=0xffff9c5e1ad3c0b8 function=ata_sff_pio_task workqueue=0xffff9c5e1ad44200 req_cpu=5120 cpu=0
+     2.69%  work struct=0xffff9c5e3fc17de0 function=vmstat_update workqueue=0xffff9c5e3d10e000 req_cpu=0 cpu=0
+```
+
+- In the above, work was queued into workqueues ~1000 times and roughly 55.03% of all work queued was `flush_to_ldisc`. 
+- A quick search through the kernel source shows `flush_to_ldisc` is defined in `drivers/tty/tty_buffer.c` and thus likely related to writing to a terminal or console. The comment for the function is as follows: 
+
+```c
+424 /**
+425  *  flush_to_ldisc
+426  *  @work: tty structure passed from work queue.
+427  *
+428  *  This routine is called out of the software interrupt to flush data
+429  *  from the buffer chain to the line discipline.
+430  *
+431  *  Locking: holds tty->buf.lock to guard buffer list. Drops the lock
+432  *  while invoking the line discipline receive_buf method. The
+433  *  receive_buf method is single threaded for each tty instance.
+434  */
+```
+
+- As such, we can safely assume the bulk of the work here is simply flushing the contents of a tty buffer and writing the contents to a terminal or console. 
+
+##### Questions
+
+- For the forking example, why trace only the `sched_process_exec` event and not do a full profile via something like `perf record -ag`? 
+- For the workqueue example, why trace only the `workqueue_queue_work` event and not trace the `kworker` activity directly? 
 
 ## Resources 
 
