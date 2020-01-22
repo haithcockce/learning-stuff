@@ -227,6 +227,133 @@ wherever you need to run 'perf report' on.
   - When using perf like this, check for areas where the kernelspace processing is concentrated in the same functions or bactraces. In the busy perf data, over 60% of all samples are `dd` attempting to read `/dev/urandom`. If the application was something else and the chief complaint is performance issues with that application, then the application vendor would need to investigate why it is reading from `/dev/urandom` so much. 
   - Alternatively, bactraces can start in a variety of places but all end in the same set of functions. Take for example updating inodes in a filesystem. If a wide variety of operations are occurring on the same inode (read, write, truncate, close, unlink, etc) you could have a wide variety of starting points for the bactraces but they could end up grinding behind the same lock for the same inode. 
 
+#### Static Kernel Tracing
+
+- Developers builtin tracepoints in logically reasonable locations to gather a number of different types of data. These built in tracepoints are _static_ as the locations and what is traced does not change unless the kernel maintainers change the code in future commits. 
+- `perf list` can show a listing of all available tracepoints. Unfortunately, determining what gives you what you need can be tricky. All events are implemented in `include/trace/events/` where the details of what is reported can be checked. 
+
+```bash
+ $ ls include/trace/events/
+9p.h                f2fs.h       irq.h      net.h        rpm.h       udp.h
+asoc.h              filelock.h   jbd2.h     oom.h        sched.h     vmscan.h
+bcache.h            filemap.h    jbd.h      pagemap.h    scsi.h      vsock_virtio_transport_common.h
+block.h             fs_dax.h     kmem.h     power.h      signal.h    workqueue.h
+bridge.h            gfpflags.h   kvm.h      printk.h     skb.h       writeback.h
+btrfs.h             gpio.h       libata.h   qdisc.h      sock.h      xdp.h
+compaction.h        host1x.h     lock.h     random.h     sunrpc.h    xen.h
+context_tracking.h  hswadsp.h    mce.h      rcu.h        syscalls.h
+devlink.h           i2c.h        migrate.h  rdma.h       target.h
+dma_fence.h         intel_ish.h  mmc.h      regmap.h     task.h
+ext3.h              intel-sst.h  module.h   regulator.h  thp.h
+ext4.h              iommu.h      napi.h     rpcrdma.h    timer.h
+```
+- For example, if unsure about what is printed when tracing `timer_expire_entry` events, below is the implementation: 
+
+```c
+ 74 /**
+ 75  * timer_expire_entry - called immediately before the timer callback
+ 76  * @timer:  pointer to struct timer_list
+ 77  *
+ 78  * Allows to determine the timer latency.
+ 79  */
+ 80 TRACE_EVENT(timer_expire_entry,
+ 81 
+ 82     TP_PROTO(struct timer_list *timer),
+ 83 
+ 84     TP_ARGS(timer),
+ 85 
+ 86     TP_STRUCT__entry(
+ 87         __field( void *,    timer   )
+ 88         __field( unsigned long, now )
+ 89         __field( void *,    function)
+ 90     ),
+ 91 
+ 92     TP_fast_assign(
+ 93         __entry->timer      = timer;
+ 94         __entry->now        = jiffies;
+ 95         __entry->function   = timer->function;
+ 96     ),
+ 97 
+ 98     TP_printk("timer=%p function=%pf now=%lu", __entry->timer, __entry->function,__entry->now)
+ 99 );
+```
+
+- So it prints the address of the timer, the function being executed in the timer, and the time when the timer fired in terms of jiffies. 
+- Below is an example of the output:
+
+```bash
+ r7 # perf record -e timer:timer_expire_entry 
+^C[ perf record: Woken up 1 times to write data ]
+[ perf record: Captured and wrote 0.227 MB perf.data (68 samples) ]
+
+ r7 # perf report --stdio | head -20
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 68  of event 'timer:timer_expire_entry'
+# Event count (approx.): 68
+#
+# Overhead  Trace output                                                           
+# ........  .......................................................................
+#
+     1.47%  timer=0xffff9c5df66f6080 function=delayed_work_timer_fn now=4470243840
+     1.47%  timer=0xffff9c5e19a7fd60 function=process_timeout now=4470243550
+     1.47%  timer=0xffff9c5e19a7fd60 function=process_timeout now=4470243600
+     1.47%  timer=0xffff9c5e19a7fd60 function=process_timeout now=4470243650
+     1.47%  timer=0xffff9c5e19a7fd60 function=process_timeout now=4470243700
+     1.47%  timer=0xffff9c5e19a7fd60 function=process_timeout now=4470243750
+     1.47%  timer=0xffff9c5e19a7fd60 function=process_timeout now=4470243800
+     1.47%  timer=0xffff9c5e19a7fd60 function=process_timeout now=4470243850
+     1.47%  timer=0xffff9c5e19a7fd60 function=process_timeout now=4470243900
+```
+
+- An example usage of static tracepoints would be when a customer notes elevated load average but no interesting CPU usage or blocked task count metrics. Typically, elevated load averages with no interesting CPU usage and low blocked task counts can be attributed to intermittent forking of children processes. 
+- Perf can enable a tracepoint near where a new process is created in the kernel to show what is being forked so much. 
+```bash
+ r7 # ps | grep bash  # grab the PID of the bash process where we will synthesize load
+27701 pts/0    00:00:43 bash
+ r7 # while [ 1 ]; do for i in {1..1000}; do  ls > /dev/null & done; sleep 1; done  # synthesize load
+ r7 # sar -q 10  # below, we can see load average rising but nothing in particularly interesting otherwise
+Linux 3.10.0-1121.el7.x86_64 (r7)       22/01/20        _x86_64_        (2 CPU)
+
+13:33:00      runq-sz  plist-sz   ldavg-1   ldavg-5  ldavg-15   blocked
+13:33:10            0       157      0.15      0.43      0.25         0
+13:33:20            0       158      0.13      0.41      0.25         0
+13:33:30            0       157      0.55      0.50      0.28         0
+13:33:40            0       157      1.27      0.66      0.33         0
+13:33:50            0       157      1.96      0.84      0.39         0
+13:34:00            0       157      2.32      0.96      0.44         0
+13:34:10            0       157      2.56      1.06      0.47         0
+13:34:20            0       157      2.97      1.20      0.53         0
+13:34:30           10       165      3.33      1.34      0.58         0
+13:34:40            8       165      3.63      1.48      0.63         0
+13:34:50            9       165      4.78      1.79      0.75         0
+13:35:00            9       164      4.68      1.86      0.78         0
+13:35:10            8       162      4.28      1.87      0.79         0
+13:35:20            3       158      4.03      1.89      0.81         0
+13:35:30            4       160      4.13      1.98      0.85         0
+^C
+ r7 # perf record -e sched:sched_process_exec -a -p 27701 -- sleep 10  # record against the bash process we created load in 
+Warning:
+PID/TID switch overriding SYSTEM
+[ perf record: Woken up 31 times to write data ]
+[ perf record: Captured and wrote 7.649 MB perf.data (5005 samples) ]
+ r7 # perf script | head -5
+ r7 # perf script | head -5
+              ls 28085 [001] 176637.736503: sched:sched_process_exec: filename=/usr/bin/ls pid=28085 old_pid=28085
+              ls 28086 [000] 176637.736803: sched:sched_process_exec: filename=/usr/bin/ls pid=28086 old_pid=28086
+              ls 28087 [001] 176637.738598: sched:sched_process_exec: filename=/usr/bin/ls pid=28087 old_pid=28087
+              ls 28088 [000] 176637.738768: sched:sched_process_exec: filename=/usr/bin/ls pid=28088 old_pid=28088
+              ls 28089 [001] 176637.740263: sched:sched_process_exec: filename=/usr/bin/ls pid=28089 old_pid=28089
+ r7 # perf script | awk '{print $1}' | sort | uniq -c
+   5000 ls
+      5 sleep
+```
+
+- Unsurprisingly, the forking is resulting in a ton of `ls` commands running and a few `sleep` commands. This matches the synthesized load. 
+
 ## Resources 
 
 - Tracepoints
