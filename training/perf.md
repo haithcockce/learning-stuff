@@ -413,6 +413,39 @@ PID/TID switch overriding SYSTEM
 - For the forking example, why trace only the `sched_process_exec` event and not do a full profile via something like `perf record -ag`? 
 - For the workqueue example, why trace only the `workqueue_queue_work` event and not trace the `kworker` activity directly? 
 
+#### Dynamic Kernel Tracing
+
+- The kernel has a number of built in tracepoints, however, despite the larger number of tracepoints, sometimes you need extremely specific instances of tracing done (or a subsystem may not have many tracepoints to begin with such as most of Infiniband). 
+- The linux kernel allows inserting probes dynamically without rewriting/recompiling the kernel in select spots. 
+- These dynamic tracepoints/probes do not have associated actions with them like the static tracepoints do (probing `sched:sched_switch` gets the previous and next tasks for example). To get data from them, you will need to pass in options to another `perf record` command.
+- Once a probe point is inserted, then it becomes an event you can monitor on (`perf record -g -e probe:my_cool_probe` for example)
+
+- `perf probe --line <FUNC or FILE>`
+  - Lists points in the function or source code where probes can be inserted
+  - `perf probe --list do_sys_open`
+  - `perf probe --list fs/open.c:100` 
+
+- `perf probe --add <FUNC or FILE:NNN>`
+  - Adds a probe at the first available point in `FUNC` or at `FILE:NNN` if able to where `NNN` is the line number
+  - Remember this is just a tracepoint/probe that has no unique additional functionalit
+  - Example: 
+```bash
+ r7 # perf probe -a do_sys_open
+Added new event:
+  probe:do_sys_open    (on do_sys_open)
+
+You can now use it in all perf tools, such as:
+
+        perf record -e probe:do_sys_open -aR sleep 1
+```
+
+- `perf probe --list`
+
+#### Mixing Profiling and Tracing
+
+- `perf record -e sched:sched_switch -g`
+- `perf sched record`
+
 ## Resources 
 
 - Tracepoints
