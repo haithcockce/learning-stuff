@@ -439,12 +439,175 @@ You can now use it in all perf tools, such as:
         perf record -e probe:do_sys_open -aR sleep 1
 ```
 
-- `perf probe --list`
+- `perf probe --list` lists active probes (tracepoints that are currently active)
 
 #### Mixing Profiling and Tracing
 
-- `perf record -e sched:sched_switch -g`
-- `perf sched record`
+- Tracing and profiling can be mixed to create more targeted data sets. 
+- Useful for when particular kernelspace events need to be monitored and gather a sample set. For example:
+  - Gathering a breakdown of all events which cause a specific process to be scheduled off a CPU and how we get there (backtrace)
+  - Profiling the syscalls taken by a userspace process and what call chains typically lead us there
+  - Gather a breakdown of time spent in functions when performing `sys_open()` calls
+- Tracing scheduler latency best exemplifies this but is not the only reason to do so. 
+
+##### Example Pt 1: Why Does My Application Show Great Latency Randomly?
+
+- Many customers run low latency apps for things like stock trading. These require microsecond (us) and nanosecond resolution often and requires constantly to be on a CPU typically. 
+- If troubleshooting shows the application is incurring latency in kernelspace even when not doing actions that would stall an application spontaneously (such as waiting on a `wait()` or `select()` or `read()` from a socket/pipe), then the most common reason is being scheduled off the CPU or receiving interrupts. 
+- We can check for certain events via `perf`. For example: 
+```bash
+ r7 # perf record -e sched:sched_switch -g -- sleep 1
+[ perf record: Woken up 1 times to write data ]
+[ perf record: Captured and wrote 0.016 MB perf.data (2 samples) ]
+ r7 # perf script
+sleep 31285 [001] 971577.494048: sched:sched_switch: sleep:31285 [120] R ==> cgrulesengd:827 [120]
+        ffffffffb8985a24 __schedule+0x514 (/usr/lib/debug/lib/modules/3.10.0-1121.el7.x86_64/vmlinux)
+        ffffffffb8986be1 schedule_user+0x31 (/usr/lib/debug/lib/modules/3.10.0-1121.el7.x86_64/vmlinu
+        ffffffffb89931cd int_careful+0x14 (/usr/lib/debug/lib/modules/3.10.0-1121.el7.x86_64/vmlinux)
+            7f93991a6140 _start+0x0 (/usr/lib64/ld-2.17.so)
+
+sleep 31285 [001] 971577.494608: sched:sched_switch: sleep:31285 [120] S ==> swapper/1:0 [120]
+        ffffffffb8985a24 __schedule+0x514 (/usr/lib/debug/lib/modules/3.10.0-1121.el7.x86_64/vmlinux)
+        ffffffffb8985d79 schedule+0x29 (/usr/lib/debug/lib/modules/3.10.0-1121.el7.x86_64/vmlinux)
+        ffffffffb8984da0 do_nanosleep+0x70 (/usr/lib/debug/lib/modules/3.10.0-1121.el7.x86_64/vmlinux
+        ffffffffb82cb29b hrtimer_nanosleep+0xbb (/usr/lib/debug/lib/modules/3.10.0-1121.el7.x86_64/vm
+        ffffffffb82cb3f6 sys_nanosleep+0x96 (/usr/lib/debug/lib/modules/3.10.0-1121.el7.x86_64/vmlinu
+        ffffffffb8992ed2 system_call+0x162 (/usr/lib/debug/lib/modules/3.10.0-1121.el7.x86_64/vmlinux
+            7f9398e9c840 __GI___libc_nanosleep+0x10 (/usr/lib64/libc-2.17.so)
+```
+- The above example uses the `sched:sched_switch` event as a tracepoint and gathers backtraces (`-g`) when they happen for the sleep command. Of course, this is contrived and we expected this sleep process to be scheduled off the CPU as it goes to sleep. 
+- Below is far more interesting: 
+```bash
+ r7 # perf record -e sched:sched_switch -g -- stress-ng --cpu 2 --cpu-method hamming
+stress-ng: info:  [12966] defaulting to a 86400 second run per stressor
+stress-ng: info:  [12966] dispatching hogs: 2 cpu
+^C[ perf record: Woken up 2 times to write data ]
+stress-ng: info:  [12966] successful run completed in 80.38s (1 min, 20.38 secs)
+[ perf record: Captured and wrote 0.479 MB perf.data (2725 samples) ]
+r7 # perf report --stdio
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 2K of event 'sched:sched_switch'
+# Event count (approx.): 2725
+#
+# Children      Self  Trace output
+# ........  ........  ...........................................................
+#
+    58.83%    58.83%  stress-ng-cpu:12968 [120] R ==> xfsaild/dm-0:401 [120]
+            |
+            |--1.87%--0x40c010
+            |          retint_careful
+            |          schedule_user
+            |          __schedule
+            |
+            |--1.65%--0x40c013
+            |          retint_careful
+            |          schedule_user
+            |          __schedule
+            |
+            |--1.61%--0x40c089
+            |          retint_careful
+[...]
+
+     8.11%     8.11%  stress-ng-cpu:12967 [120] R ==> kworker/0:3:10583 [120]
+     7.78%     7.78%  stress-ng-cpu:12967 [120] R ==> rcu_sched:9 [120]
+     3.23%     3.23%  stress-ng-cpu:12967 [120] R ==> in:imjournal:1300 [120]
+     3.19%     3.19%  stress-ng-cpu:12968 [120] R ==> kworker/1:0:31548 [120]
+     2.50%     2.50%  stress-ng-cpu:12968 [120] R ==> rcu_sched:9 [120]
+[...]
+```
+- Above, we stressed the CPUs with two threads performing hamming distance calculations. To record what was happening with those threads, we recorded against those threads with a `perf record` and watching for anytime those `stress-ng` threads were kicked off a CPU for something else. 
+- In the breakdown, we see the majority of rescheduleing was to let xfsaild run. The call chains `retint_careful` -> `schedule_user` -> `__schedule` means that we are choking up the CPU. Processes are attempting to preempt the application and we give up the CPU to allow those applications to run. Here it's mostly `xfsaild` but a few other things like `kworker` and `rcu_sched`. Here, we can at least confirm (in this second contrived example) that the system is not tuned properly for the workload expected as other kernelspace threads are taking over from time to time. CPU affinity should be set for various kernel threads and rcu callbacks should be disabled to attempt mitigating this. 
+
+##### Example Pt 2
+
+- Thankfully, because checking latency via perf is such a prominent exercise, perf now ships with an entire subtool for checking scheduling and latency: `perf sched`. It's quite similar to the above example but captures more data with more relevant tracepoints enabled and formats it in a more readible way (useful for extremely large systems). 
+```bash
+r7 # perf sched record -- stress-ng --cpu 2 --cpu-method hamming
+stress-ng: info:  [14570] defaulting to a 86400 second run per stressor
+stress-ng: info:  [14570] dispatching hogs: 2 cpu
+^C[ perf record: Woken up 5 times to write data ]
+stress-ng: info:  [14570] successful run completed in 38.92s
+[ perf record: Captured and wrote 8.804 MB perf.data (80536 samples) ]
+ r7 # perf sched script
+             perf 14569 [001] 975758.720109: sched:sched_stat_runtime: comm=perf pid=14569 runtime=182986 [ns] vruntim
+            perf 14569 [001] 975758.720111:       sched:sched_wakeup: perf:14570 [120] success=1 CPU:001
+            perf 14569 [001] 975758.720113:       sched:sched_switch: perf:14569 [120] R ==> perf:14570 [120]
+            perf 14570 [001] 975758.720220:       sched:sched_wakeup: migration/1:13 [0] success=1 CPU:001
+            perf 14570 [001] 975758.720220: sched:sched_stat_runtime: comm=perf pid=14570 runtime=110849 [ns] vruntim
+            perf 14570 [001] 975758.720221:       sched:sched_switch: perf:14570 [120] R ==> migration/1:13 [0]
+     migration/1    13 [001] 975758.720223: sched:sched_migrate_task: comm=perf pid=14570 prio=120 orig_cpu=1 dest_cp
+     migration/1    13 [001] 975758.720230:       sched:sched_switch: migration/1:13 [0] S ==> perf:14569 [120]
+            perf 14569 [001] 975758.720271: sched:sched_stat_runtime: comm=perf pid=14569 runtime=42392 [ns] vruntime
+            perf 14569 [001] 975758.720275:       sched:sched_switch: perf:14569 [120] S ==> swapper/1:0 [120]
+         swapper     0 [000] 975758.720303:       sched:sched_switch: swapper/0:0 [120] R ==> perf:14570 [120]
+       stress-ng 14570 [000] 975758.720854: sched:sched_stat_runtime: comm=stress-ng pid=14570 runtime=629416 [ns] vr
+       stress-ng 14570 [000] 975758.720860:       sched:sched_wakeup: rcu_sched:9 [120] success=1 CPU:000
+       stress-ng 14570 [000] 975758.720862: sched:sched_stat_runtime: comm=stress-ng pid=14570 runtime=6416 [ns] vrun
+       stress-ng 14570 [000] 975758.720862:       sched:sched_switch: stress-ng:14570 [120] R ==> rcu_sched:9 [120]
+       rcu_sched     9 [000] 975758.720864: sched:sched_stat_runtime: comm=rcu_sched pid=9 runtime=4581 [ns] vruntime
+       rcu_sched     9 [000] 975758.720865:       sched:sched_switch: rcu_sched:9 [120] S ==> stress-ng:14570 [120]
+       stress-ng 14570 [000] 975758.721854: sched:sched_stat_runtime: comm=stress-ng pid=14570 runtime=989175 [ns] vr
+[...]
+```
+- This is quite a bit of data, but the `perf sched record` captured not only the same info as the `sched_switch` that we originally checked for, but also instances of when tasks move to another CPU (`sched_migrate_task`) and instances where we check for how long something has been running (`sched_stat_runtime`). In these, we can see which process we switch to and on which CPU along with a plethora of other scheduling information. 
+- The same data can be fed to the other parts of the `perf sched` subtool. For example, we can check statistics on latency for processes: 
+```bash
+ r7 # perf sched latency | head
+
+ -----------------------------------------------------------------------------------------------------------------
+  Task                  |   Runtime ms  | Switches | Average delay ms | Maximum delay ms | Maximum delay at       |
+ -----------------------------------------------------------------------------------------------------------------
+  systemd:(32)          |      4.329 ms |       62 | avg:    1.338 ms | max:    3.360 ms | max at: 975759.402856 s
+  khugepaged:37         |      0.043 ms |        4 | avg:    1.015 ms | max:    1.034 ms | max at: 975761.167889 s
+  stress-ng:14570       |      4.835 ms |        8 | avg:    0.061 ms | max:    0.171 ms | max at: 975758.722948 s
+  stress-ng-cpu:(2)     |  77817.511 ms |      415 | avg:    0.048 ms | max:    2.845 ms | max at: 975776.744779 s
+  perf:14569            |      5.905 ms |        4 | avg:    0.031 ms | max:    0.117 ms | max at: 975758.720230 s
+  sshd:8058             |      0.430 ms |        6 | avg:    0.018 ms | max:    0.078 ms | max at: 975797.645459 s 
+```
+- The above is the table indicating how long processes ran for in millisecond, the amount of times the process had to switch (IE give up a CPU to run on another CPU or let something else run on this CPU while it queued back up), the average amount of delay (time between wakeup and actually running, so think of it as time waiting int he CPU queues), the maximum delay encountered and the point in time which that occurred. 
+- The subtool also provides a way of visualizing (within reason) the activity: 
+```bash
+ r7 # perf sched timehist -MVw | head
+Samples do not have callchains.
+           time    cpu  012  task name                       wait time  sch delay   run time
+                             [tid/pid]                          (msec)     (msec)     (msec)
+--------------- ------  ---  ------------------------------  ---------  ---------  ---------
+  975758.720111 [0001]       perf[14569]                                                      awakened: perf[14570]
+  975758.720113 [0001]   s   perf[14569]                         0.000      0.000      0.000
+  975758.720220 [0001]       perf[14570]                                                      awakened: migration/1[13]
+  975758.720221 [0001]   s   perf[14570]                         0.000      0.001      0.108
+  975758.720223 [0001]    m    migration/1[13]                                                  migrated: perf[14570] cpu 1 => 0
+  975758.720230 [0001]   s   migration/1[13]                     0.000      0.001      0.008
+  975758.720275 [0001]   s   perf[14569]                         0.116      0.000      0.045
+```
+- Per line, we see 
+  - the perf with tid 14569 running on CPU 1 when another perf thread, 14570 woke up to run on a CPU. 
+  - Perf:14569 incurred a scheduling event (s) on CPU 1 and finished running (for less than a millisecond)
+  - Perf:14570 began running on CPU 1 when a migration thread woke up (meaning it will soon move a process to another CPU)
+  - Perf:14570 incurred a scheduling event (s) on CPU 1 and finished running after ~108 us
+  - The migration thread on CPU 1 moved perf:14570 from CPU 1 to CPU 0
+  - That same migration thread finished running after ~8 us
+  - Perf:14569 ran and finished running after ~45 us
+- The output is extremely dense and can be difficult to consume, but it is extremely handy in tracking down latency causes. Thankfully, we can limit the output to specific tids/pids if needed: 
+```bash
+ r7 # perf sched timehist -MVw --tid=14572,14571 | head
+Samples do not have callchains.
+           time    cpu  012  task name                       wait time  sch delay   run time
+                             [tid/pid]                          (msec)     (msec)     (msec)
+--------------- ------  ---  ------------------------------  ---------  ---------  ---------
+  975758.725127 [0000]   m     stress-ng[14570]                                                 migrated: stress-ng[14571] cpu 0 => 1
+  975758.725129 [0000]       stress-ng[14570]                                                 awakened: stress-ng[14571]
+  975758.725252 [0000]   m     stress-ng[14570]                                                 migrated: stress-ng[14572] cpu 0 => 0
+  975758.725254 [0000]       stress-ng[14570]                                                 awakened: stress-ng[14572]
+  975758.725379 [0001]   s   stress-ng-cpu[14571]                0.000      0.057      0.192
+  975758.725426 [0001]       swapper                                                          awakened: stress-ng-cpu[14571]
+  975758.725461 [0000]  s    stress-ng-cpu[14572]                0.000      0.046      0.161
+```
+- The output is limited to only the threads actually doing the churn from stress-ng (`stress-ng-cpu`). What we see here mostly is stree-ng forking and creating it's children (thus multiple instances of those threads waking up and being migrated immediately to another CPU). 
 
 ## Resources 
 
