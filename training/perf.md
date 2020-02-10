@@ -57,6 +57,8 @@
     - Line 1199: if the tracepoint is enabled, then we can trace specifically immediately following the function called in a timer
     - Note that the tracepoints for Line 1197 and 1199 are separate tracepoints. 
 
+# CRUNCH TRAINING
+
 - Perf provides insight via analysis of samples 
   - _Sampling_ is the action of recording observations of variables
     - For example, when sampling coin flips, the coin is the variable because it can be heads or tails at any point, and a sample would be a coin flip result such as a coin flip resulting in heads.
