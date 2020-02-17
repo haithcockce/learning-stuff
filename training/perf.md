@@ -57,7 +57,6 @@
     - Line 1199: if the tracepoint is enabled, then we can trace specifically immediately following the function called in a timer
     - Note that the tracepoints for Line 1197 and 1199 are separate tracepoints. 
 
-# CRUNCH TRAINING
 
 - Perf provides insight via analysis of samples 
   - _Sampling_ is the action of recording observations of variables
@@ -228,6 +227,9 @@ wherever you need to run 'perf report' on.
   - As a reminder, perf is recording events and doing sample-based metric reporting. This creates a square-rectangle scenario where high `%sys` in SAR/collectl/pcp would mean tons of samples of execution in kernelspace in perf data while high `%sys` in perf does not mean high `%sys` in SAR/collectl/pcp. For example, above, `swapper` is a kernelspace thread which idles a CPU. If a system is idle, then a ton of samples will be in kernelspace processing but due to `swapper` idling CPUs. 
   - When using perf like this, check for areas where the kernelspace processing is concentrated in the same functions or bactraces. In the busy perf data, over 60% of all samples are `dd` attempting to read `/dev/urandom`. If the application was something else and the chief complaint is performance issues with that application, then the application vendor would need to investigate why it is reading from `/dev/urandom` so much. 
   - Alternatively, bactraces can start in a variety of places but all end in the same set of functions. Take for example updating inodes in a filesystem. If a wide variety of operations are occurring on the same inode (read, write, truncate, close, unlink, etc) you could have a wide variety of starting points for the bactraces but they could end up grinding behind the same lock for the same inode. 
+  
+# CRUNCH TRAINING
+
 
 #### Static Kernel Tracing
 
