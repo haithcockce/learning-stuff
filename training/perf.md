@@ -228,8 +228,6 @@ wherever you need to run 'perf report' on.
   - When using perf like this, check for areas where the kernelspace processing is concentrated in the same functions or bactraces. In the busy perf data, over 60% of all samples are `dd` attempting to read `/dev/urandom`. If the application was something else and the chief complaint is performance issues with that application, then the application vendor would need to investigate why it is reading from `/dev/urandom` so much. 
   - Alternatively, bactraces can start in a variety of places but all end in the same set of functions. Take for example updating inodes in a filesystem. If a wide variety of operations are occurring on the same inode (read, write, truncate, close, unlink, etc) you could have a wide variety of starting points for the bactraces but they could end up grinding behind the same lock for the same inode. 
   
-# CRUNCH TRAINING
-
 
 #### Static Kernel Tracing
 
@@ -416,6 +414,11 @@ PID/TID switch overriding SYSTEM
 
 - For the forking example, why trace only the `sched_process_exec` event and not do a full profile via something like `perf record -ag`? 
 - For the workqueue example, why trace only the `workqueue_queue_work` event and not trace the `kworker` activity directly? 
+
+
+# CRUNCH TRAINING
+
+
 
 #### Dynamic Kernel Tracing
 
