@@ -429,8 +429,8 @@ PID/TID switch overriding SYSTEM
 
 - `perf probe --line <FUNC or FILE>`
   - Lists points in the function or source code where probes can be inserted
-  - `perf probe --list do_sys_open`
-  - `perf probe --list fs/open.c:100` 
+  - `perf probe --line do_sys_open`
+  - `perf probe --line fs/open.c:100` 
 
 - `perf probe --add <FUNC or FILE:NNN>`
   - Adds a probe at the first available point in `FUNC` or at `FILE:NNN` if able to where `NNN` is the line number
