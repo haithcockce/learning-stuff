@@ -333,7 +333,8 @@ Linux 3.10.0-1123.el7.x86_64 (r7) 	03/16/2020 	_x86_64_	(2 CPU)
 01:13:58 PM         0       154      3.59      1.75      0.72         0
 01:14:08 PM         0       154      3.44      1.77      0.74         0
 ^C
- r7 # perf record -e sched:sched_process_fork -e sched:sched_process_exec -a -- sleep 10[ perf record: Woken up 36 times to write data ]
+ r7 # perf record -e sched:sched_process_fork -e sched:sched_process_exec -a -- sleep 10
+[ perf record: Woken up 36 times to write data ]
 [ perf record: Captured and wrote 9.272 MB perf.data (10538 samples) ]
  r7 # perf script
            sleep  8142 [000]  4125.883636: sched:sched_process_exec: filename=/usr/bin/sleep pid=8142 old_pid=8142
