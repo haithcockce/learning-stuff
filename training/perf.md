@@ -316,48 +316,62 @@ ext4.h              iommu.h      napi.h     rpcrdma.h    timer.h
 
 - An example usage in support of static tracepoints would be when a customer notes elevated load average but no interesting CPU usage or blocked task count metrics. Typically, elevated load averages with no interesting CPU usage and low blocked task counts can be attributed to intermittent forking of children processes. 
 - Perf can enable a tracepoint near where a new process is created in the kernel to show what is being forked so much. 
+
 ```bash
- r7 # ps | grep bash  # grab the PID of the bash process where we will synthesize load
-27701 pts/0    00:00:43 bash
  r7 # while [ 1 ]; do for i in {1..1000}; do  ls > /dev/null & done; sleep 1; done  # synthesize load
  r7 # sar -q 10  # below, we can see load average rising but nothing in particularly interesting otherwise
-Linux 3.10.0-1121.el7.x86_64 (r7)       22/01/20        _x86_64_        (2 CPU)
+Linux 3.10.0-1123.el7.x86_64 (r7) 	03/16/2020 	_x86_64_	(2 CPU)
 
-13:33:00      runq-sz  plist-sz   ldavg-1   ldavg-5  ldavg-15   blocked
-13:33:10            0       157      0.15      0.43      0.25         0
-13:33:20            0       158      0.13      0.41      0.25         0
-13:33:30            0       157      0.55      0.50      0.28         0
-13:33:40            0       157      1.27      0.66      0.33         0
-13:33:50            0       157      1.96      0.84      0.39         0
-13:34:00            0       157      2.32      0.96      0.44         0
-13:34:10            0       157      2.56      1.06      0.47         0
-13:34:20            0       157      2.97      1.20      0.53         0
-13:34:30           10       165      3.33      1.34      0.58         0
-13:34:40            8       165      3.63      1.48      0.63         0
-13:34:50            9       165      4.78      1.79      0.75         0
-13:35:00            9       164      4.68      1.86      0.78         0
-13:35:10            8       162      4.28      1.87      0.79         0
-13:35:20            3       158      4.03      1.89      0.81         0
-13:35:30            4       160      4.13      1.98      0.85         0
+01:12:38 PM   runq-sz  plist-sz   ldavg-1   ldavg-5  ldavg-15   blocked
+01:12:48 PM         0       160      3.39      1.31      0.52         0
+01:12:58 PM         7       160      3.51      1.40      0.55         0
+01:13:08 PM         0       155      3.37      1.43      0.57         0
+01:13:18 PM         0       155      3.01      1.42      0.58         0
+01:13:28 PM         0       155      2.95      1.46      0.60         0
+01:13:38 PM         0       155      2.64      1.44      0.60         0
+01:13:48 PM         0       160      3.77      1.72      0.70         0
+01:13:58 PM         0       154      3.59      1.75      0.72         0
+01:14:08 PM         0       154      3.44      1.77      0.74         0
 ^C
- r7 # perf record -e sched:sched_process_exec -a -p 27701 -- sleep 10  # record against the bash process we created load in 
-Warning:
-PID/TID switch overriding SYSTEM
-[ perf record: Woken up 31 times to write data ]
-[ perf record: Captured and wrote 7.649 MB perf.data (5005 samples) ]
- r7 # perf script | head -5
- r7 # perf script | head -5
-              ls 28085 [001] 176637.736503: sched:sched_process_exec: filename=/usr/bin/ls pid=28085 old_pid=28085
-              ls 28086 [000] 176637.736803: sched:sched_process_exec: filename=/usr/bin/ls pid=28086 old_pid=28086
-              ls 28087 [001] 176637.738598: sched:sched_process_exec: filename=/usr/bin/ls pid=28087 old_pid=28087
-              ls 28088 [000] 176637.738768: sched:sched_process_exec: filename=/usr/bin/ls pid=28088 old_pid=28088
-              ls 28089 [001] 176637.740263: sched:sched_process_exec: filename=/usr/bin/ls pid=28089 old_pid=28089
- r7 # perf script | awk '{print $1}' | sort | uniq -c
-   5000 ls
-      5 sleep
+ r7 # perf record -e sched:sched_process_fork -e sched:sched_process_exec -a -- sleep 10[ perf record: Woken up 36 times to write data ]
+[ perf record: Captured and wrote 9.272 MB perf.data (10538 samples) ]
+ r7 # perf script
+           sleep  8142 [000]  4125.883636: sched:sched_process_exec: filename=/usr/bin/sleep pid=8142 old_pid=8142
+            bash 14520 [001]  4126.787632: sched:sched_process_fork: comm=bash pid=14520 child_comm=bash child_pid=8143  (1)
+            bash 14520 [001]  4126.787918: sched:sched_process_fork: comm=bash pid=14520 child_comm=bash child_pid=8144
+            bash 14520 [001]  4126.788157: sched:sched_process_fork: comm=bash pid=14520 child_comm=bash child_pid=8145
+            bash 14520 [001]  4126.788505: sched:sched_process_fork: comm=bash pid=14520 child_comm=bash child_pid=8146
+              ls  8143 [000]  4126.788679: sched:sched_process_exec: filename=/usr/bin/ls pid=8143 old_pid=8143          (2)
+            bash 14520 [001]  4126.788744: sched:sched_process_fork: comm=bash pid=14520 child_comm=bash child_pid=8147
+            bash 14520 [001]  4126.788991: sched:sched_process_fork: comm=bash pid=14520 child_comm=bash child_pid=8148
+            bash 14520 [001]  4126.789255: sched:sched_process_fork: comm=bash pid=14520 child_comm=bash child_pid=8149
+            bash 14520 [001]  4126.789536: sched:sched_process_fork: comm=bash pid=14520 child_comm=bash child_pid=8150
+            bash 14520 [001]  4126.789767: sched:sched_process_fork: comm=bash pid=14520 child_comm=bash child_pid=8151
+            bash 14520 [001]  4126.789991: sched:sched_process_fork: comm=bash pid=14520 child_comm=bash child_pid=8152
+            bash 14520 [001]  4126.790215: sched:sched_process_fork: comm=bash pid=14520 child_comm=bash child_pid=8153
+            bash 14520 [001]  4126.790462: sched:sched_process_fork: comm=bash pid=14520 child_comm=bash child_pid=8154
+            bash 14520 [001]  4126.790690: sched:sched_process_fork: comm=bash pid=14520 child_comm=bash child_pid=8155
+            bash 14520 [001]  4126.790954: sched:sched_process_fork: comm=bash pid=14520 child_comm=bash child_pid=8156
+            bash 14520 [001]  4126.791183: sched:sched_process_fork: comm=bash pid=14520 child_comm=bash child_pid=8157
+            bash 14520 [001]  4126.791447: sched:sched_process_fork: comm=bash pid=14520 child_comm=bash child_pid=8158
+            bash 14520 [001]  4126.791714: sched:sched_process_fork: comm=bash pid=14520 child_comm=bash child_pid=8159
+            bash 14520 [001]  4126.791923: sched:sched_process_fork: comm=bash pid=14520 child_comm=bash child_pid=8160
+              ls  8152 [000]  4126.792616: sched:sched_process_exec: filename=/usr/bin/ls pid=8152 old_pid=8152
+              ls  8147 [001]  4126.792808: sched:sched_process_exec: filename=/usr/bin/ls pid=8147 old_pid=8147
+              ls  8148 [000]  4126.792827: sched:sched_process_exec: filename=/usr/bin/ls pid=8148 old_pid=8148
+              ls  8146 [000]  4126.793280: sched:sched_process_exec: filename=/usr/bin/ls pid=8146 old_pid=8146
+              ls  8149 [000]  4126.793636: sched:sched_process_exec: filename=/usr/bin/ls pid=8149 old_pid=8149
+              ls  8153 [001]  4126.794045: sched:sched_process_exec: filename=/usr/bin/ls pid=8153 old_pid=8153
+              ls  8151 [000]  4126.795040: sched:sched_process_exec: filename=/usr/bin/ls pid=8151 old_pid=8151
+              ls  8154 [000]  4126.795230: sched:sched_process_exec: filename=/usr/bin/ls pid=8154 old_pid=8154
+              ls  8150 [001]  4126.795284: sched:sched_process_exec: filename=/usr/bin/ls pid=8150 old_pid=8150
+            bash 14520 [001]  4126.796356: sched:sched_process_fork: comm=bash pid=14520 child_comm=bash child_pid=8161
+              ls  8155 [001]  4126.796730: sched:sched_process_exec: filename=/usr/bin/ls pid=8155 old_pid=8155
+              ls  8145 [001]  4126.798180: sched:sched_process_exec: filename=/usr/bin/ls pid=8145 old_pid=8145
+[...]
 ```
 
-- Unsurprisingly, the forking is resulting in a ton of `ls` commands running and a few `sleep` commands. This matches the synthesized load. 
+- Above, the PIDs can be matched between instances of forks, where we see bash forking, and instances of process execution, with is the ls commands running. For example, bash forks a child whose PID is 8143 (1) and later on, ls executes with pid 8143 (2). 
 
 ##### Example: `kworker` threads running wild
 
