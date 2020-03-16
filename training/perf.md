@@ -373,6 +373,80 @@ Linux 3.10.0-1123.el7.x86_64 (r7) 	03/16/2020 	_x86_64_	(2 CPU)
 ```
 
 - Above, the PIDs can be matched between instances of forks, where we see bash forking, and instances of process execution, with is the ls commands running. For example, bash forks a child whose PID is 8143 (1) and later on, ls executes with pid 8143 (2). 
+- The above events help when the issue is with super heavy forking activity, but if the perpetrator are a large number of already active threads having burst activity, forking will be nonexistant and the above tracepoints are useless. Below is a python reproducer script to create several threads and spin in userspace: 
+
+```python
+#!/usr/bin/env python
+
+from time import sleep
+from random import randint
+import threading
+
+def work():
+    n = 0
+    for i in xrange(500):
+        n = n + i
+        n = n / 2
+        n = n - randint(0, 100)
+    return n
+
+def spin():
+    while True:
+        work()
+        sleep(1)
+
+if __name__ == '__main__':
+    threadpool = []
+    for i in xrange(1000):
+        t = threading.Thread(target=spin)
+        threadpool.append(t)
+        t.start()
+```
+
+- Below is the same perf command as above: 
+
+```bash
+ r7 # perf record -e sched:sched_process_fork -e sched:sched_process_exec -a -- sleep 10[ perf record: Woken up 1 times to write data ]
+[ perf record: Captured and wrote 0.318 MB perf.data (1 samples) ]
+ r7 # perf script
+           sleep  5906 [000]  2617.029599: sched:sched_process_exec: filename=/usr/bin/sleep
+```
+
+- Because there is no forking avitivity but rather the burst activity is all in long living threads, the `sched:sched_process_fork` and `sched:sched_process_exec` were not triggered except for the lone sleep command above. 
+- With burst acitivity, the long living processes will instead jump onto and off of the CPUs frequently, so `sched:sched_wakeup` can be used instead: 
+
+```bash
+ r7 # perf record -e sched:sched_wakeup -a -- sleep 10
+[ perf record: Woken up 509 times to write data ]
+[ perf record: Captured and wrote 127.805 MB perf.data (1392668 samples) ]
+ r7 # perf script | head -20
+            perf 10305 [001]  2980.951844: sched:sched_wakeup: python:3621 [120] success=1 CPU:001
+            perf 10305 [001]  2980.951848: sched:sched_wakeup: python:4336 [120] success=1 CPU:001
+          python  3824 [000]  2980.951848: sched:sched_wakeup: python:4361 [120] success=1 CPU:000
+          python  3824 [000]  2980.951855: sched:sched_wakeup: python:4379 [120] success=1 CPU:000
+          python  3824 [000]  2980.951861: sched:sched_wakeup: python:3656 [120] success=1 CPU:000
+          python  3824 [000]  2980.951866: sched:sched_wakeup: python:4072 [120] success=1 CPU:000
+          python  3824 [000]  2980.951871: sched:sched_wakeup: python:3948 [120] success=1 CPU:000
+            perf 10305 [001]  2980.951883: sched:sched_wakeup: python:4171 [120] success=1 CPU:001
+            perf 10305 [001]  2980.951889: sched:sched_wakeup: python:3873 [120] success=1 CPU:001
+            perf 10305 [001]  2980.951909: sched:sched_wakeup: python:3778 [120] success=1 CPU:001
+          python  3778 [001]  2980.951916: sched:sched_wakeup: python:4018 [120] success=1 CPU:001
+         swapper     0 [000]  2980.951933: sched:sched_wakeup: python:4377 [120] success=1 CPU:000
+         swapper     0 [000]  2980.951934: sched:sched_wakeup: python:3597 [120] success=1 CPU:000
+          python  3597 [000]  2980.951948: sched:sched_wakeup: python:4332 [120] success=1 CPU:000
+            perf 10305 [001]  2980.951950: sched:sched_wakeup: perf:10317 [120] success=1 CPU:001
+          python  3597 [000]  2980.951954: sched:sched_wakeup: python:3838 [120] success=1 CPU:000
+          python  3597 [000]  2980.951960: sched:sched_wakeup: python:4317 [120] success=1 CPU:000
+            perf 10317 [001]  2980.951973: sched:sched_wakeup: python:3765 [120] success=1 CPU:001
+            perf 10317 [001]  2980.951978: sched:sched_wakeup: python:3829 [120] success=1 CPU:001
+            perf 10317 [001]  2980.951987: sched:sched_wakeup: python:4223 [120] success=1 CPU:001
+```
+
+- The `sched:sched_wakeup` tracepoint is triggered quite literally when a process has been kicked to wake back up and get into the runqueues on the CPUs. 
+- The above can be read as such, column 3 is the CPU the process in column 1 with PID in column 2 were running on when the `sched:sched_wakeup` event was triggered. The process woken up is column 6 on the CPU in column 9. 
+  - For example, in the first record, the `perf` command with PID 10305 was running on CPU 1 when python with PID 3621 wokeup on CPU 1. 
+  - Similarly, python with PID 3824 was running on CPU 0 when python with PIDs 4361, 4379, 3656, 4072, and 3948 wokeup on CPU 0.
+- The large number of python processes waking up help isolate the issue in this case to python likely performing the burst activity.
 
 ##### Example: `kworker` threads running wild
 
