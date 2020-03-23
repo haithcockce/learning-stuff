@@ -314,7 +314,7 @@ ext4.h              iommu.h      napi.h     rpcrdma.h    timer.h
 
 ##### Example Usage: Load average but no blocked or running tasks
 
-- An example usage in support of static tracepoints would be when a customer notes elevated load average but no interesting CPU usage or blocked task count metrics. Typically, elevated load averages with no interesting CPU usage and low blocked task counts can be attributed to intermittent forking of children processes. 
+- An example usage in support of static tracepoints would be when a customer notes elevated load average but no interesting CPU usage or blocked task count metrics. Typically, elevated load averages with no interesting CPU usage and low blocked task counts can be attributed to intermittent forking of children processes or burst activity within longer living processes. 
 - Perf can enable a tracepoint near where a new process is created in the kernel to show what is being forked so much. 
 
 ```bash
