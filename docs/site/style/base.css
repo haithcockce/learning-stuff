@@ -1,0 +1,23 @@
+/* Bulma CSS */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/bulma/0.8.0/css/bulma.min.css');
+
+/* Fonts */
+@import url('https://rsms.me/inter/inter-ui.css');
+@import url('https://fonts.googleapis.com/css?family=Roboto+Mono');
+
+* {
+    font-family: 'Inter UI', sans-serif;
+}
+
+pre, code {
+    font-family: 'Roboto Mono', monospace;
+}
+
+.redirect {
+  cursor: pointer;
+  cursor: hand;
+}
+
+.subtitle {
+    font-weight: 200;
+}
