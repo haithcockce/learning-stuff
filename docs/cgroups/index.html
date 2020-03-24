@@ -1,0 +1,833 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+</head>
+<body>
+<!-- #TODO
+ - Setup and Configuration: Systemd Style Cgroups: provide a generic example
+ - Update Tabel of Contents.
+ - hyperlink table of contents
+ - Start at configuration
+-->
+  <style>
+    @import 'site/style/base.css';
+    code,a {
+        color: #209cee;
+    }
+  </style>
+
+<section class="hero is-medium is-info is-bold">
+  <div class="hero-body">
+    <div class="container">
+      <h1 class="title">Cgroups and You</h1>
+      <h1 class="subtitle">Living with Cgroups</h1>
+    </div>
+  </div>
+</section>
+<!--
+<section class="section">
+  <div class="container">
+    <h1 class="title"><a href='https://redhat.slides.com/chaithco/deck-9?token=kzRB4NuO'>Now with a presentation!</a></h1>
+    <div class="content">
+    </div>
+  </div>
+</section>
+-->
+<section class="section">
+  <div class="container">
+    <h1 class="title">Table of Contents</h1>
+    <div class="content">
+      <ol>
+        <li>Synopsis and Definitions</li>
+        <li>Filesystem Hierarchy</li>
+        <li>Setup and Configuration</li>
+        <li>Examples</li>
+        <li>Support</li>
+        <li>Common Issues</li>
+        <li>References</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h1 class="title">Synopsis and Definitions</h1>
+    <div class="content">
+      <h4 class="subtitle">Synopsis (TL;DR)</h4>
+      <p>Conceptually, and most commonly seen in support, cgroups provides a
+      sophisticated method to control process resource usage. Groups of tasks
+      are assigned to one or more resource controllers and each group has its
+      own unique definitions for how the processes can access the resources
+      goverened by the controllers. The controllers are organized into a
+      filesystem hierarchy. These groups of tasks along with their limit
+      definitions are called <b>cgroups</b></p>
+      <p>For the rest of this training, having a virtual machine running RHEL 7
+      or RHEL 8 with 1 CPU, 1 GiB of memory, and a user named 'test' will allow
+      you to practice. </p>
+      <h4 class="subtitle">Definitions</h4>
+      <ul>
+        <li><p><b>Cgroups</b> or <b>Control Groups</b> associates a set of tasks
+          with a set of resource usage parameters for one or more subsystems/resouce controllers.
+          Conceptually, if configured to do so, all backup jobs ran by user "BAK" will consume
+          half as much CPU time as anything else when the CPUs are busy. Systemd
+          uses CGroups named <code>user.slice</code>, <code>system.slice</code>
+          and <code>machine.slice</code> wherein systemd then refers to these CGroups
+          as "slices."</p></li>
+        <li><p><b>Subsystems</b> an entity which acts on a cgroup based
+          on the parameters defined by the cgroup. Also known as a <b>resource controller</b>.
+          A subsystem can be manually defined and compiled (though this is extremel
+          uncommon). Conceptually, if configured to do so, the resource
+          controller for block devices will prioritize other users over the BAK user
+          to prevent backup opertions from clogging disk throughput.</p></li>
+        <li><p><b>Hierarchy</b> In cgroups v1, present in RHEL 6 and 7 and the
+          default still for RHEL 8, specified controllers are mounted to unique directories
+          and cgroups are arranged in a tree under each of these directories. Because a
+          cgroup can be associated with multiple resource controllers, the same
+          cgroup will appear in multiple locations in the cgroup hierarchy. Any
+          single task on a system is associated with a cgroup in the tree
+          hierarchy. As such, cgroups can have "sub-cgroups". For example,
+          the backup jobs can be limited to 10% CPU usage at most when the
+          CPUs are busy. The remaining 90% can be split into 20% and 70% for
+          regular user activity and the stock trading application
+          respectively. </br>
+          With cgroups v2, You have cgroups in a single hierarchy (rather than
+          appearing in different locations in different hierarchies), all resource
+          controllers are mounted, and only designated contollers are associated with
+          specific cgroups. </p>
+        <figure class="image" >
+            <img src='cgroupsv1.png' style="width: 557px; height: 486px;">
+        </figure>
+          Conceptually, v1 has cgroups associated with one or more resource controllers
+          whereas v2 has resource controllers associated with one or more cgroups.</li>
+      </ul>
+      <h4 class="subtitle">Resource Controllers/Subsystems</h4>
+      <ul>
+        <li><code>cpuacct</code> (v1) creates automatic reports on CPU resources
+          used by tasks in a cgroup. It is mounted together with the cpu
+          controller on the same mount. </li>
+        <li><code>cpu</code> (v1/2) uses the CPU scheduler to manage execution time
+          allotments for cgroups. It is mounted together with the cpuacct controller on
+          the same mount.</li>
+        <li><code>cpuset</code> (v1) pins cgroups to a specified set of CPUs and
+          and memory nodes.</li>
+        <li><code>memory</code> (v1/2) sets limits on memory use of cgroups
+          and generates automatic reports on memory resources used within the cgroup.</li>
+        <li><code>devices</code> (v1) allows or denies access to devices for tasks in
+          a cgroup</li>
+        <li><code>freezer</code> (v1) suspends or resumes tasks in a cgroup</li>
+        <li><code>blkio</code> (v1, "io" in v2) sets limits on input/output bandwidth to and from
+          block devices</li>
+        <li><code>net_cls</code> (v1) Network Classifier, tags packets uniquely when
+          originating from cgroups. Tagged packets can be manipulated by other
+          tools such as quality of service tools (traffic controller) or firewall
+          tools (iptables/netfilter).</li>
+        <li><code>net_prio</code> (v1) Provides QoS style bandwidth control on a
+          per-NIC basis. </li>
+        <li><code>perf_event</code> (v1) Allows a per-cgroup method of monitoring
+          processes with <code>perf</code> rather than just per-CPU basis. </li>
+        <li><code>hugetlb</code> (v1) manages hugepage usage and access. RHEL 7 only.</li>
+        <li><code>pids</code> (v1/2) limits the amount of processes which can be
+          created. RHEL 7 only. </li>
+        <li><code>rdma</code> (v1/2) limits the amount of RDMA resources a cgroup can
+          have. RHEL 8 only.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+
+    <h1 class="title">Filesystem Hierarchy</h1>
+    <div class="content">
+      <i>CGroups v1</i>
+      <p>Cgroups are organized in a pseudofilesystem where controllers are
+      mounted to specific sections of the filesystem. Cgroups made within these
+      controllers will automatically be populated with files defining limits on
+      the cgroup imposed by the respective controller. Creating cgroups means simply mounting
+      the respective subsystem/resource controller, then creating a directory in
+      that controller and echoing values into the
+      various files to define the limits and describe which processes belong to
+      the respective cgroups. The directories within represent the cgroups.</p>
+
+      <p>The tools described later on are actually quite trivial and do nothing
+      more than create the directories in question as well as echo the values
+      to the respctive files. Any userspace entity with appropriate permissions
+      may do this; Apache's YARN (Yet Another Resource Negotiator), the resource
+      manager and job scheduler for Apache's Hadoop, actually mounts the resource
+      contollers to custom locations and manages the cgroups independently of
+      other userspace entities within RHEL 6. </p>
+
+      <i>CGroups v2</i>
+      <p>CGroups v2 operate much in the same way as v1; creating cgroups means
+      making directories, and changing parameters and moving processes around in
+      cgroups means echoing values into the files in the pseudofilesystem. The
+      main difference here is resource controllers are mounted to the filesystem
+      and cgroups are created within the resource controllers to indicate the
+      controller should manage that cgroup. In v2, once a cgroup is created by
+      creating a new directory, the files <code>cgroup.controllers</code> and
+      <code>cgroup.subtree_control</code> list the available controllers for the cgroup and the controllers in use
+      for the cgroup respective. Currently, systemd is the only userspace frontend for CGroups v2. </p>
+
+      <p>CGroups can be made within CGroups thus creating the hierarchical structure.
+      At the top of the hierarchy in v1 and v2 is the "root" CGroup. Processes not
+      belonging to any CGroup reside here (except in systemd CGroups wherein they
+      go to a <code>user.slice</code>, <code>system.slice</code>, or
+      <code>machine.slice</code> CGroup).
+      To illustrate the hierarchy, a school server may have a student CGroup and a faculty CGroup,
+      and within the faculty CGroup exists sysadmin and professors CGroups. CGroups
+      v1 differs from v2 in regards to where processes can reside in the hierarchy;
+      v1 allows a process to reside anywhere
+      within the hierarchy whereas v2 requires a process to be in either the root
+      CGroup or at the "bottom" of any CGroup hierarchy. For example, with the
+      school server, v1 allows processes to be within the faculty CGroup, but v2
+      requires processes in the faculty CGroup to be within the sysadmin or professors CGroups. </p>
+
+      <p>Within hierarchies, v2 cgroups can not have a controller associated with it
+      there the controller is also not associated with the parent. In the school example,
+      the cpu and memory controllers can be associated and enabled with the faculty. If the
+      professors cgroups has only the memory controller enacted, then children cgroups
+      therein can not use the cpu controller. For example, in the professors cgroup,
+      Dr. Smith and Dr. Jameson can use the memory controller since the memory controller
+      is associated with the professors cgroup, but they can not use the cpu controller
+      since it is not associated with the professors cgroup.</p>
+
+      <h4 class="subtitle">Structure</h4>
+      <i>CGroups v1</i>
+      <ul>
+        <li>Cgroup v1 hierarchys are structured with the following conventions:
+          <code>/&lt;mount point&gt;/&lt;named subsys&gt;/&lt;named cgroup&gt;/</code></li>
+        <ul>
+          <li><code>&lt;mount point&gt;</code> the mount point of the resource
+          controller</li>
+          <li><code>&lt;named subsys&gt;</code> the root of the resource
+          controller filesystem containing files defining limits and which tasks
+          and cgroups are associated with the resource controller</li>
+          <li><code>&lt;named cgroup&gt;</code> the cgroup itself in which parameters
+          and subcgroups are stored</li>
+          <li>Examples: <code>/cgroup/cpu/</code> and
+          <code>/sys/fs/cgroup/memory/</code>
+            <ul>
+              <li><code>/cgroup/</code> is the default location for RHEL 6 cgroups
+              </li>
+              <li><code>/sys/fs/cgroup/</code> is the default location for RHEL 7
+              and RHEL 8 cgroups. At the time of writing, systemd does not allow a change to
+              the mount points for cgroups.</li>
+              <li><code>/cgroup/cpu/</code> is the mount point for the cpu
+              resource controller for RHEL 6. Note this is the root cgroup for the
+              cpu controller.</li>
+              <li><code>/sys/fs/cgroup/memory/</code> is the mount point for the
+              memory controller for RHEL 7 and RHEL 8. Note this is the root cgroup for the
+              memory controller. </li>
+            </ul>
+          </li>
+        </ul>
+        <li>Several files exist within the hierarchies that provide the various
+          parameters to the limits, provide per-cgroup statistics, as well as
+          describe what to do for management of the cgroup and controller. Likewise,
+          cgroups are listed here as well as directories. Check the Common Files
+          section for a listing of files found across all cgroups. Below are a few
+          examples:
+        <ul>
+          <li><code>/cgroup/memory/memory.limit_in_bytes</code> controls the
+          limit of userspace memory usage</li>
+          <li><code>/cgroup/cpu/tasks</code> dictates which PIDs belong to the
+          respective cgroup and will receive the cgroup limitations</li>
+          <li><code>/sys/fs/cgroup/memory/memory.stat</code> provides statistics
+          on the current limits and usage of memory in a
+          <code>/proc/meminfo</code> style</li>
+          <li><code>/sys/fs/cgroup/memory/test/</code> is the <i>test</i> cgroup
+          which uses the memory controller</li>
+        </ul>
+      </ul>
+
+      <i>CGroups v2</i>
+      <ul>
+        <li>Cgroup v2 follows the convention of
+          <code>/&lt;mount point&gt;/&lt;named cgroup&gt;/</code> which are the
+          same as v1 above.</li>
+        <li>At the time of writing, systemd manages cgroups v2, so the mount
+          points can not be changed. </li>
+        <li>Examples: <code>/sys/fs/cgroup/test/my_test/</code></li>
+        <ul>
+          <li><code>/sys/fs/cgroup/</code> is the mount point for the cgroups and
+            the root cgroup for the system.</li>
+          <li><code>/test/</code> is the cgroup <i>test</i></li>
+          <li><code>/my_test/</code>is a child cgroup of <i>test</i>. <i>REMINDER</i>
+            a process can not reside in parent cgroups (like <i>test</i>) except for
+            the root cgroup. All processes must be a part of a child cgroup (like
+            <i>my_test</i>).</li>
+        </ul>
+        <li>Like v2, several common files exist across all cgroups.</li>
+      </ul>
+
+      <h4 class="subtitle">Creating CGroups Manually</h4>
+      <p>CGroups v1 and v2 have the same method of managing cgroups in so much
+        that files and directories are manipulated within the cgroup filesystem.
+        The services which manage cgroups mentioned later on do nothing more than
+        create and write to files in these hierarchies. For example, the process
+        to create a new cgroup, <i>test</i>, with a limit of 512 MiB of memory
+        and move the process with PID 1000 in v1 is seen below:</p>
+<pre># mount -t tmpfs cgroup_root /sys/fs/cgroup
+# mkdir /sys/fs/cgroup/memory
+# mount -t cgroup -omemory memory /sys/fs/cgroup/memory
+# mkdir /sys/fs/cgroup/memory/test
+# echo 536870912 &gt; /sys/fs/cgroup/memory/test/memory.limit_in_bytes
+# echo 1000 &gt; /sys/fs/cgroup/memory/test/tasks
+</pre>
+
+      <p>The process is similar for v2: </p>
+
+<pre># mount -t cgroup2 none /sys/fs/cgroup
+# mkdir /sys/fs/cgroup/test
+# echo +memory &gt; /sys/fs/cgroup/test/cgroup.subtree_control
+# echo 536870912 &gt; /sys/fs/cgroup/test/memory.max
+# echo 1000 &gt; /sys/fs/cgroup/memory/test/cgroup.procs
+</pre>
+
+      <p><i>REMINDER</i> for v1, in creating the <i>test</i> directory in <code>/sys/fs/cgroup/memory/</code>,
+        the <i>test</i> cgroup is then associated with the memory controller. In v2,
+        a controller is associated with a cgroup by writing the names of the
+        controllers to the <code>cgroup.subtree_control</code> file. </p>
+
+        <h4 class="title">Common Files</h4>
+        <i>CGroups v1</i>
+        <ul>
+          <li><code>tasks</code> and <code>cgroup.procs</code> lists the threads associated with this cgroup.
+            Writing a valid task (PID or TID) to this file will move the corresponding thread(s)
+            to this cgroup. <code>cgroup.procs</code> contains thread group IDs as
+            well and useful for multithreaded applications</li>
+          <li><code>release_agent</code> command to run when the cgroup empties if
+            <code>notify_on_release</code> is set.</li>
+          <li><code>notify_on_release</code> defines if the <code>release_agent</code> will run
+            when the cgroup is emptied (has all tasks removed from it)</li>
+          <li><code>cgroup.sane_behavior</code> shows if a cgroup was mounted with
+            the mount option <code>-o __DEVEL__sane_behavior</code>. The mount option
+            simply tries to have v1 cgroups mount and operate similar to v2. Deprecated
+            in RHEL 8 and mounting with <code>-o __DEVEL__sane_behavior</code> is
+            currently unsupported anyway. </li>
+            <li><code>cgroup.event_control</code> provides a notification API for
+              userspace and useful for performing actions on certain events.</li>
+        </ul>
+
+        <i>CGroups v2</i>
+        <ul>
+          <li><code>cgroup.procs</code> Similar to v1's <code>cgroup.procs</code> file.</li>
+          <li><code>cgroup.threads</code> Similar to <code>cgroup.procs</code> but
+            specific to Thread IDs (TIDs).</li>
+          <li><code>cgroup.subtree_control</code> This is a list of controllers
+            that are active (enabled) in the cgroup. Enabling and disabling a
+            controller in a cgroup is done by writing the controller name preceded
+            by either a "+" or "-" respectively into this file.</li>
+          <li><code>cgroup.controllers</code> Read-only list of the resource controllers
+            available in this cgroup. The contents of
+            this file match the contents of the <code>cgroup.subtree_control</code> file in
+            the parent cgroup.</li>
+          <li><code>cgroup.events</code> Notification API but far more streamlined
+            than v1's </li><code>cgroup.event_control</code>
+          <li><code>cgroup.stat</code> describes the amount of alive child
+            cgroups in this hierarchy and the amount of cgroups which are dead
+            but their resources are still being reaped (such as swapping in pages
+            of memory).</li>
+          <li><code>cgroup.max.depth</code> Maximum levels of child cgroups. A
+            level here is a cgroup and all its sibling cgroups.</li>
+          <li><code>cgroup.max.descendants</code> Maximum amount of child cgroups
+            which can be in this hierarchy. Includes all descendents. </li>
+          <li><code>cgroup.type</code> Determines if the cgroup is thread-specific
+            or process-specific. If process-specific, then actions taken on a thread
+            are taken on all threads in the same process. Threads thus must be all
+            in the same cgroup. Thread-specific means thread-level granulatiry of
+            contol and threads can be spread across multiple cgroups. </li>
+        </ul>
+    </div>
+  </div>
+</section>
+
+
+<section class="section">
+  <div class="container">
+    <h1 class="title">Setup and Configuration</h1>
+    <div class="content">
+      <p>The infrastructure is all built into the kernel since RHEL 6, however, systemd and
+      <code>libcgroup</code> can be used to interact with cgroups in a more
+      user-friendly userspace method than simply creating files and directories.
+      Note, at the time of writing, RHEL 8 provides libcgroup but that may not
+      remain!</p>
+
+      <p>Since systemd manages cgroups now, mounting and using CGroups v2 requires
+        telling systemd to mount them with the boot line parameter
+        <code>systemd.unified_cgroup_hierarchy=1</code> which tells systemd to
+        mount all and use all v2 controllers. v1 and v2 can be mixed,
+        the kernel parameters must include <code>cgroup_no_v1=&lt;CONTROLLER&gt;</code>
+        to prevent systemd from mounting the controller into its v1 management,
+        ensure <code>systemd.unified_cgroup_hierarchy=1</code> is removed, and
+        the controller can be manually mounted elsewhere as v2 with the command
+        <code>mount -t cgroup2 none &lt;MOUNT POINT&gt;</code>. In general, to
+        mix the versions, systemd must be managing v1, and the v2 controllers must
+        be manually mounted and managed.
+
+      <h4 class="subtitle"><code>libcgroup</code> Style Cgroups</h4>
+      <code>libcgroup</code> provides a variety of binaries and services which
+      more or less provide a user-friendly front end to interacting with cgroups.
+      Aside from cgroups being managed by systemd vs <code>libcgroup</code> and
+      configuration files being drastically different, they differ in management
+      intent as well; <code>libcgroup</code> does per-user resource management
+      whereas systemd does per-service resource management. Systemd currently has
+      no method of persistent per-user resource management.
+      <code>libcgroup</code> is the only user-space front end tool set available in RHEL 6.
+      <code>libcgroup</code> is available in RHEL 7 as an alternative to systemd resource control
+      but customers should be encouraged to move to systemd style cgroups to
+      future-proof application configurations. RHEL 8 ???</p>
+      <i>Installation and Services</i>
+      <ul>
+        <li><code># yum install libcgroup</code>, will automatically pull in the
+        additionally required <code>libcgroup-tools</code> package, both are
+        provided from the <code>rhel-{7,6}-server-rpms</code> repos</li>
+        <li><code>cgred</code> The Control Group Rules Engine Daemon (aka
+        <code>cgrulesengd</code>) responsible for moving tasks to cgroups by
+        echoing new values into the <code>tasks</code> file in a cgroup.</li>
+        <li><code>cgconfig</code> Responsible for setting up the controllers and
+        setting the limits for each of the cgroups.</li>
+        <li>Both <code>cgconfig</code> and <code>cgred</code> need to be started
+        and enabled:
+        <ul>
+          <li>RHEL 6: <code># chkconfig --add cgconfig && chkconfig --add cgred
+          && service cgconfig restart && service cgred restart</code></li>
+          <li>RHEL 7: <code># systemctl enable cgred cgconfig && systemctl restart cgred cgconfig</code></li>
+        </ul>
+      </ul>
+      <i>Configuration</i>
+      <ul>
+        <li><code>libcgroup</code> style cgroups uses
+          <code>/etc/cgconfig.{conf,d/}</code> for cgroup definitions and
+          <code>/etc/cgrules.conf</code> to define what users and tasks belong
+          to which cgroup.</li>
+        <li><code>/etc/cgconfig.{conf,d/}</code> defines the various control
+          groups including their name, the controllers the cgroup will reside in, and
+          limits enforced by the controller on members of the group.</li>
+        <ul>
+          <li>Cgroups with the same name in <code>/etc/cgconfig.d/*</code> will
+            override configs in <code>/etc/cgconfig.conf</code>.</li>
+          <li>Configs in <code>/etc/cgconfig.d/*</code> are loaded in
+            alphanumeric order.</li>
+          <li><code>/etc/cgconfig.d/*</code> contains <i>mount</i>, <i>group</i>,
+            and <i>default</i> sections. All sections are optional and provided in no
+            particular order. Each section can have multiple stanzas.</li>
+          <li>The <i>mount</i> stanzas define which controllers are mounted and where
+            they are mounted to for the entire system. These stanzas take the following form:
+<pre>mount {
+    &lt;controller&gt; = &lt;path&gt;;
+    ...
+}</pre></li>
+            <ul>
+              <li><i>controller</i> is the named controller, such as cpu, blkio,
+              memory, devices, etc which enforces the restrictions</li>
+              <li><i>path</i> is the location where the controller is mounted to</li>
+              <li>This section is included by default in RHEL 6
+              <code>libcgroups</code> but not in RHEL 7 <code>libcgroups</code>
+              as the controllers are already mounted via systemd</li>
+            </ul>
+          <li>The <i>group</i> stanzas contain <i>perm</i> and <i>
+          &lt;controller&gt;</i> sections, both optional, and the <i>perm</i>
+          section contains the <i>admin</i> and <i>task</i> permission sections,
+          both of which are also optional:
+
+<pre>group &lt;name&gt; {
+    perm {
+        task {
+            uid = &lt;task user&gt;;
+            gid = &lt;task group&gt;;
+            fperm = &lt;file permissions&gt;;
+        }
+        admin {
+            uid = &lt;admin name&gt;;
+            gid = &lt;admin group&gt;;
+            dperm = &lt;directory permissions&gt;;
+            fperm = &lt;file permissions&gt;;
+        }
+    }
+    &lt;controller&gt; {
+        &lt;param name&gt; = &lt;param value&gt;;
+        ...
+        }
+    ...
+}</pre>
+
+          <ul>
+            <li>The <i>name</i> defines the title of the cgroup and what is
+              seen in the cgroup filesystem and used in configuration files.</li>
+            <li>The <i>task</i> section defines the user, <i>uid</i>, and
+              group, <i>gid</i>, owner for the <code>tasks</code> file along
+              with the file permissions, <i>fperm</i>, to set on the
+              <code>tasks</code> file.</li>
+            <li>The <i>admin</i> section is similar to the <i>task</i> section but
+              for all other files in the cgroup. The <i>dperm</i> limits the permissions of
+              the directory the cgroup resides in.</li>
+            <li>Either both the <i>task</i> or <i>admin</i> sections must be
+              defined or neither can be defined. Leaving one section out and not
+              the other causes an error on restarting <code>cgconfig</code>.</li>
+            <li>The ownership and permissions are not inhereted by children
+              cgroups.</li>
+            <li><i>fperm</i> and <i>dperm</i> set the initial permissions for files </li>
+            <li><i>&lt;controller&gt;</i> is the resource controller/subsystem associated
+              with the cgroup and is the start of the stanza defining cgroup
+              resource limitation parameters for that controller.</li>
+            <li><i>&lt;param name&gt;</i> is the controller parameter which provides one of a
+              variety of methods to restrict resource usage</li>
+            <li><i>&lt;param value&gt;</i> is the configured limit for the parameter.</li>
+              </ul>
+            </li>
+        </ul>
+        <li><code>/etc/cgrules.conf</code> defines what users and processes are
+        associated with which resource controllers and their respective
+        hierarchies.</li>
+        <ul>
+          <li>Rules are defined similarly to those in <code>/etc/security/limits.conf</code></li>
+          <li>Each line consists of
+            <code>&lt;user[:executable]&gt; &lt;controllers&gt; &lt;cgroup&gt;</code></li>
+          <li><code>&lt;user[:executable]&gt;</code> can be a user or group
+            when defined with '@' such as <code>test</code> or <code>@admin</code>.
+            Also accepts the '*' wildcard parameter to match all users.</li>
+          <li><code>[:executable]</code> is optional and allows for cgroups to be applied
+            to specific executables ran by the specified user. For example,
+            <code>test:/usr/bin/cp</code> would apply the designated cgroup to instances
+            of the <code>cp</code> command ran by the user <i>test</i>.</li>
+          <li><code>&lt;controllers&gt;</code> is a comma-separated list of controllers
+            the user or group is associated with. Also accepts the '*' wild card character
+            to match all controllers.</li>
+          <li><code>&lt;cgroup&gt;</code> is the target cgroup process will be associated with
+            if the process matches the associated rule. For example,
+            <code>peter   cpu   test1/</code> means the user <i>peter</i> is in the
+            <i>test</i> cgroup which has the cpu controller associated with it. </li>
+          <li>The first rule matched when walking top to bottom of the file will determine
+            which cgroup the new process will be in.</li>
+          <li><code>cgrules.conf(5)</code> Provides a great overview and description
+            of how to modify this file.</li>
+        </ul>
+      </ul>
+
+
+      <h4 class="subtitle">Systemd Style Cgroups</h4>
+      <ul>
+        <li>Cgroup configurations are statically applied to services via
+          system unit files.</li>
+        <li>The configurations are applied in the <code>[Service]</code> section
+          most commonly but can be defined in <code>[Slice]</code>,
+          <code>[Scope]</code>, <code>[Socket]</code>, <code>[Mount]</code>,
+          <code>[Swap]</code> sections.</li>
+        <li>Adding cgroup configurations to systemd is as simple as adding a
+          key-value pair to the service unit file. For example,
+          <code>CPUQuota=30%</code> sets the max amount of time as a percentage
+          processes in that cgroup can consume across all CPUs.</li>
+        <li><code>systemd.resource-control(5)</code> Provides a listing with details of the
+          available options.</li>
+        <li>Below is an example unit file with a cgroup option/systemd resource configuration:</li>
+
+<pre>
+[Service]
+CPUQuota=20%  # CPUQuota is a systemd cgroup options and limits cpu usage
+Type=simple
+User=test
+ExecStart=/my/cool/application
+ExecStop=/usr/bin/killall application
+</pre>
+
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+<section class="section">
+  <div class="container">
+    <h1 class="title">Examples</h1>
+    <div class="content">
+      <ul>
+        <li><p>Basic CPU Shares Testing with <code>libcgroup</code>.</p></li>
+        <ol>
+          <li>Create the following cgroup in <code>/etc/cgconfig.conf</code>:</li>
+
+<pre>group test {
+    cpu {
+        cpu.shares="512";
+    }
+}
+</pre>
+
+          <li>Now, as root, run the following commands:</li>
+
+<pre># su test -c 'dd if=/dev/zero of=/dev/null &amp;'
+# dd if=/dev/zero of=/dev/null &amp;
+# top
+</pre>
+
+          <li>In the top output, root's <code>dd</code> process should be
+            consuming about 66% of a CPU while test's <code>dd</code> process
+            should be consuming around 33%.</li>
+
+          <div class="notification is-info">
+            What happens to test's <code>dd</code> when you kill off the <code>dd</code>
+            process owned by root? Why? HINT: <code>/usr/share/doc/kernel-doc-3.10.0/Documentation/scheduler/sched-design-CFS.txt</code>
+          </div>
+
+        </ol>
+        <li><p>Basic CPU Quota testing with systemd style cgroups.</p></li>
+        <ol>
+          <li> Put the following unit file config in
+          <code>/etc/systemd/system/test-dd.service</code> file:</li>
+
+<pre>
+[Service]
+CPUQuota=20%
+Type=simple
+User=test
+ExecStart=/usr/bin/dd if=/dev/zero of=/dev/null
+ExecStop=/usr/bin/killall dd
+</pre>
+
+          <li>Now, start the newly created service,
+          <code>systemctl daemon-reload && systemctl start test-dd</code></li>
+          <li>Open a new terminal and run <code>top</code>. In the top output,
+          <code>dd</code> should be consuming roughly 20% of a cpu.</li>
+          <div class="notification is-info">
+            How is this behavior different from <code>cpu.shares</code> ?
+          </div>
+
+        </ol>
+
+        <li>Control a forkbomb</li>
+        <ol>
+          <li>Put the following unit file config in
+            <code>/etc/systemd/system/test-forkbomb.service</code>:</li>
+
+<pre>
+[Service]
+TasksMax=100
+Type=forking
+User=test
+ExecStart=/bin/bash -c ':(){ :|: & };:'
+ExecStop=/usr/bin/killall bash
+</pre>
+
+          <li>Now, start the newly created service,
+            <code>systemctl daemon-reload && systemctl start test-dd</code></li>
+          <li>Open a new terminal and check <code>/var/log/messages</code> and ps
+            output for errors on forking and a count of the processes. </li>
+        </ol>
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+<section class="section">
+  <div class="container">
+    <h1 class="title">Support</h1>
+    <div class="content">
+      <ul>
+        <li>Sosreports</li>
+        <ul>
+          <li>RHEL 6 sosreports provides only <code>/proc/cgroups</code>
+          (described below) and the config files noted above.</li>
+          <li>RHEL 6 sosreport does <b>not</b> collect <code>/etc/cgconfig.d/</code></li>
+          <li>RHEL 7 collects the same contents as RHEL 6 sosreports, but also collects
+          the entire cgroup hierarchy under <code>/sys/fs/cgroup/</code> as well as
+          a <code>ps</code> command output containing which processes are in which
+          cgroups under <code>sos_commands/process/</code>.</li>
+          <li>Depending on the limitations defined in the cgroups, errors may be
+          printed in <code>/var/log/messages</code> such as 'Resource temporarily
+          unavailable' if TasksMax is hit or OOM Killer messages if memory limits
+          are hit. </li>
+        </ul>
+        <li>Commands</li>
+        <ul>
+          <li><code>systemd-cgtop</code> provides top-like output of resource usage of the
+          various systemd-managed services</li>
+          <li><code>ps</code> allows the cgroup to be listed for processes in RHEL 6 and 7.
+          For example: <code>ps -O cgroup</code> provides cgroup info for processes part of the
+          current session. <code>ps axo pid,ppid,user,group,lwp,nlwp,start,time,comm,cgroup</code>
+          shows info on processes systemwide and their cgroups (default ps info in RHEL 7
+          sosreport process info noted above)</li>
+          <li><code>cgget</code> can display parameters and statistics about cgroups. Can
+          be used like <code>cgget -g memory:test</code> which shows the limitations and
+          statistics of memory within the test cgroup. <code>cgget -r cpu.shares /</code>
+          will show the cpu shares cgroup config for the root cgroup.</li>
+          <li><code>systemctl status</code> shows the systemd-managed cgroup governing the
+          service in question (EG: <code>systemctl status sshd</code>)</li>
+          <li><code>systemd-cgls</code> lists the cgroups in full hierarchy along with what
+          unit the processes are a part of. </li>
+          <li>Several commands exist to create transient cgroups, set parameters,
+          start processes in and move processes into cgroups, <code>cgcreate</code>,
+          <code>cgclear</code>, <code>cgdelete</code>, <code>cgclassify</code>,
+          <code>cgexec</code>, <code>cgset</code></li>
+          <li><code>cgsnapshot</code> Not used often, but generates a
+          <code>cgconfig.conf</code> file based on current cgroups settings. Useful
+          for generating portable configurations based on customizations within the
+          pseudofilesystem. </li>
+          <li><code>lssubsys</code> Shows controller information. Most useful to see
+          mountpoints but info is also in commands which list mount points such as
+          <code>mount</code> and <code>findmnt</code>.</li>
+          <li><code>lscgroup</code> Lists cgroups on the system (but not their configs
+          or the tasks in them)</li>
+        </ul>
+        <li>Filesystem Entries</li>
+        <ul>
+          <li><code>/proc/&lt;PID&gt;/cgroup</code> describes which cgroups the
+          process belongs to.</li>
+          <li><code>/proc/cgroups</code> lists from left to right the mounted
+          subsystem, the ID of the controller, amount of cgroups within the controller,
+          and if the controller is enabled. </li>
+          <li><code>&lt;cgroup&gt;/{tasks,cgroup.procs}</code> shows the PIDs in the
+          respective cgroup. Echoing PIDs into these files moves the process to the
+          cgroup in question.</li>
+          <li><code>&lt;cgroup&gt;/{cpu,memory}.stat</code> provides various statistical
+          information about the cgroup.</li>
+        </ul>
+        <li>Services</li>
+        <ul>
+          <li>Cgred</li>
+          <ul>
+            <li>RHEL 6: in <code>/etc/sysconfig/cgred.conf</code> add <code>LOG="-vvv"</code></li>
+            <li>Will default to /var/log/messages</li>
+            <li>RHEL 7: in <code>/etc/sysconfig/cgred</code> append <code>-vvv</code>
+            to the <code>OPTIONS</code> line. </li>
+          </ul>
+        </ul>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+
+<section class="section">
+  <div class="container">
+    <h1 class="title">Common Issues</h1>
+    <div class="content">
+      <ul>
+        <li>Cgroups fails to start with cpuset</li>
+        <ul>
+          <li>Make sure both <code>cpuset.cpus</code> and
+          <code>cpuset.mems</code> are both set as both are required for the
+          cpuset controller if the cpuset controller is needed.</li>
+        </ul>
+        <li>Cgroups fails to start with the following error:</li>
+
+<pre>r6 # service cgconfig restart
+Stopping cgconfig service:                                 [  OK  ]
+Starting cgconfig service: /sbin/cgconfigparser; error loading /etc/cgconfig.conf: Failed to remove a non-empty group
+Failed to parse /etc/cgconfig.conf or /etc/cgconfig.d      [FAILED]
+</pre>
+
+        <ul>
+          <li>This occurs when a parameter can not be satisfied, such as creating a
+          cpuset for CPUs 5-8 on a single core system. Also commonly seen when setting
+          <code>cpuset.mems</code>. This parameter designates NUMA nodes and is often
+          thought of as Gibibytes or banks of RAM.</li>
+        </ul>
+        <li>Cgroups fails to start with the following error:</li>
+
+<pre>r6 # service cgconfig restart
+Stopping cgconfig service:                                 [  OK  ]
+Starting cgconfig service: Error: cannot mount &lt;CONTROLLER&gt; to /cgroup/&lt;CONTROLLER&gt;: Device or resource busy
+/sbin/cgconfigparser; error loading /etc/cgconfig.d/cgconfig.conf: Cgroup mounting failed
+Failed to parse /etc/cgconfig.conf or /etc/cgconfig.d      [FAILED]
+</pre>
+        <ul>
+          <li>This occurs when a controller is already mounted and the controller is
+          attempted to be mounted elsewhere. </li>
+        </ul>
+        <li>How do we use cgroups to do per-user resource control?</li>
+        <ul>
+          <li>libcgroups offers user-based resource control. Systemd offers per-
+              user resource control with some quirks. For example, by default, while
+              all users are part of the <code>user.slice</code>, the <code>user.slice>
+              </code> can not have its limits modified with a unit file without
+              manually scripting it to do so. If a unit file is created under
+              <code>/etc/systemd/system/user-.slice.d/</code> describing limits, then
+              the users will have those limits imposed on them on a per-user basis.
+              For example:</li>
+<pre> r8 # cat /etc/systemd/system/user-.slice.d/memory-limit.conf
+[Slice]
+Slice=user.slice
+MemoryLimit=256M
+
+# The root of the user.slice is unchanged but each user has the above limit
+ r8 # cat /sys/fs/cgroup/memory/user.slice/memory.limit_in_bytes
+ 9223372036854771712
+
+ r8 # ls /sys/fs/cgroup/memory/user.slice/user-* -d
+ /sys/fs/cgroup/memory/user.slice/user-0.slice  /sys/fs/cgroup/memory/user.slice/user-1001.slice
+
+ r8 # cat /sys/fs/cgroup/memory/user.slice/user-*.slice/memory.limit_in_bytes
+ 268435456
+ 268435456
+</pre>
+          <li>Likewise, per-user slice files can be set to make unique limits enforced
+              on a per-user level. These can reside in
+              <code>/etc/systemd/system/user-UID.slice</code> where UID is replaced with the
+              user id of the user in question.</li>
+        </ul>
+        <li>Sometimes new processes are moved to the wrong cgroup and sometimes
+          they are moved to the correct cgroup.</li>
+        <ul>
+          <li>If using libcgroup in RHEL 6 and the issue can be reproduced, add the logging
+            options to <code>/etc/sysconfig/cgred.conf</code>. The
+            <code>LOG=</code> will need to be set to <code>"-vvv"</code> and the
+            <code>LOG_FILE=</code> will need to be set to a location to capture
+            the logs. </li>
+          <li>If using libcgroup in RHEL 7 and the issue can be reproduced, append
+            <code>-vvv &lt;LOGFILE LOCATION&gt;</code> to the <code>OPTIONS=</code>
+            line in <code>/etc/sysconfig/cgred</code>.</li>
+          <li>Monitor the log file for the process in question and see where it is
+            moved to and what rules it matches. Often times in these instances, the
+            rules are numerous and complicated and simply need to be reconfigured.</li>
+        </ul>
+        <li>My real time application fails to run and the <code>sched_setscheduler</code>
+          fails with EPERM in RHEL 7.</li>
+        <ul>
+          <li>In RHEL 7, systemd by default does not do CPU Accounting. A variety of
+            actions can cause it to start CPU acocunting either on boot or afterwards,
+            including changing the default behavior in
+            <code>/etc/systemd/system.conf</code> and starting a service with CPU
+            accounting enabled. When this occurs, systemd will begin managing CPU
+            accounting create cgroups for system.slice and user.slice. In doing so,
+            it will set <code>cpu.rt_runtime_us=0</code> which prevents any real
+            time processes from running.</li>
+          <li>You will need to ensure
+            <a href="https://access.redhat.com/solutions/2860951">CPU accounting
+            does not occur</a> or manually set the runtime parameter afterwards.</li>
+        </ul>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+
+<section class="section">
+  <div class="container">
+    <h1 class="title">References</h1>
+    <div class="content">
+      <ul>
+        <li><code>systemd.exec(5)</code></li>
+        <li><code>systemd.resource-control(5)</code></li>
+        <li><code>cgconfig.conf(5)</code></li>
+        <li><code>cgrules.conf(5)</code></li>
+        <li><code>/usr/share/doc/kernel-doc-2.6.32/Documentation/scheduler/sched-design-CFS.txt</code></li>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+
+
+</body>
+</html>
+
