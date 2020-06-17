@@ -41,19 +41,95 @@
   <div class="container">
     <h1 class="title">Terminology and Concepts</h1>
     <div class="content">
+      The metrics themselves are described below first. Many of the concepts
+      and entities in PCP can be thought of as "internal" and "external"
+      where "external" entities are ones where a user may interact with
+      directly, while "internal" entities are ones a user does not typically
+      interact with directly but are used by other PCP components. Below, the
+      internal and external components are described after the performance
+      metrics are described.
+
+      <h2 class="subtitle">Metrics, Metric Naming, and Metric Organization</h2>
       <ul>
-        <li><p>Metrics are organized hierarchically into tree-like structures.
-          Levels in the trees refine the relationships between metrics within
-          those subtrees. For example, paging activity would be a child of
-          memory in general while page scanning and major faults would be
-          children of pageing activity.</p></li>
         <li><p><b>Domain</b> A logical grouping of metrics typically based on
-          source such as NFS Client, Nginx, Windows, Linux (kernel), etc</p></li>
-        <li></li>
-        <li></li>
-        <li></li>
-        <li></li>
-        <li></li>
+           source such as NFS Client, Nginx, Windows, Linux (kernel), etc</p></li>
+        <li><p><b>PMNS</b> Performance Metrics Namespace is the method
+          by which metrics are organized hierarchically into tree-like
+          structures. Levels in the trees define the relationships between
+          metrics within those subtrees. For example, paging activity would
+          be a child of memory in general while page scanning and major
+          faults would be children of paging activity. Typically, a PMNS is
+          a single tree of metrics wherein a system can (and often will) have
+          more than one PMNS available to use.</p></li>
+        <li><p>The name of a performance metric is the path down through the
+          PMNS delineated by '.' where the left-most parts of the metric name
+          are the top levels of the hierarchy and the right-most parts are
+          the bottom levels of the hierarchy.
+	      <li><p><b>Example</b> <code>network.interface.in.bytes</code></p>
+	        <ul>
+            <li>The metric is part of the <i>network</i> namespace.</li>
+            <li>The metric is part of a group of metrics describing network
+              interface metrics.</li>
+            <li>The metric is part of a group of metrics describing ingress
+              traffic over network interfaces.</li>
+            <li>The metric describes network ingress traffic over interfaces
+              in terms of bytes.</li>
+          </ul></li>
+        <li><p><b>Example</b> <code>mem.util.swapFree</code></p>
+          <ul>
+            <li>The metric is part of the <i>memory</i> namespace.</li>
+            <li>The metric is part of a group of metrics describing memory
+              utilization metrics.</li>
+            <li>The metric describes the amount of free space in the system's swap
+              spaces and swapfiles.</li>
+          </ul></li>
+        <li><b>Instances</b> are literal sources of a metric such as the
+          cumulative amount of swap space on the system or the currently
+          running kernel version.</li>
+        <li><b>Instance Domains</b> are collections of literal sources of
+          metrics such as NICs, CPUs, disks, all PIDs, etc</li>
+        <li><b>Example</b>
+<pre>
+ r7 # pminfo -f network.interface.in.bytes
+
+network.interface.in.bytes                   ← Metric
+    inst [0 or "eth0"] value 15853434        ← Instance <----- Instance Domain
+    inst [1 or "lo"] value 18080             ← Instance <-'
+</pre>
+        </li>
+      </ul>
+
+      <h2 class="subtitle">Internal Architectural Components</h2>
+      <ul>
+        <li><b>PMID</b> Performance Metric IDentifier. A unique value
+          mapped to a specific metric. Typically you don't interact with
+          this.</li>
+        <li><b>PMDA</b> Performance Metric Domain Agent. A PMDA sits between
+          other PCP components and the system-specific sources of metrics to
+          retrieve metrics and convert them in a way consumable for PCP and
+          other PCP components. Thus, metrics could come from a Mac OSX
+          kernel (darwin), Linux kernel, or Windows kernels, as well as from
+          applications such as Nginx, Informatica, Apache, etc.</li>
+        <li><b>PMCD</b> Performance Metric Collector Daemon. The PMCD is the
+          core internal component responsible for collecting metrics from PMDAs
+          when requested by other components. PMCD must be running in order to
+          gather metrics on a live system or record them into logs.</li>
+      </ul>
+
+      <h2 class="subtitle">External Architectural Components</h2>
+      <ul>
+        <li><code>pminfo</code> Displays metrics in use, metadata and
+          information about metrics themselves, as well as where the metric
+          values are being pulled from. Can also present values of
+          metrics.</li>
+        <li><code>pmval</code> Dumps arbitrary metric values for a metric.
+          Useful when needing to inspect a specific metric quickly.</li>
+        <li><code>pmlogger</code> Daemon responsible for collecting and
+          logging metrics for asynchronous metric analysis into archive
+          files.</li>
+        <li><code>pmrep</code> Performance metrics reporter. A highly
+          customizable tool to present metrics nearly however desired. Most
+          analysis with PCP data is done with pmrep.</li>
       </ul>
     </div>
   </div>
@@ -64,6 +140,8 @@
 <section class="section">
   <div class="container">
     <h1 class="title">Architecure</h1>
+    Below is a visual representation of how all the core components work 
+    together.
     <figure class="image is-2by1">
       <img src="pcp-architecure.png" class="has-ratio" width="1872" height="868">
     </figure>
