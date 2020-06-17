@@ -1,0 +1,252 @@
+#!/usr/bin/env stap
+
+# Written by:  Dave Wysochanski
+# Modified by: Steve Johnston     
+#              Made it release independent (RHEL6/RHEL7)
+#              Added documentation
+#              Allow partial name matching (EG. "kmalloc" or "size") + change arrays to match
+#              Added run-time options to overcome potential issues
+#              Added array max sizes (overwrite the oldest after hitting the limit)
+#              Added change for RHEL6 mallocs of "size-" which calls kmem_cache_alloc_trace()
+#              Optionally now allows stap -x <pid> to monitor just a pid
+#
+# To Run :
+#           stap -g -v kmalloc-mem-leak.stp kmalloc-1024 [-x <pid>] [-d <module>] -DMAXMAPENTRIES=1000000 -DMAXACTION=64000 -DSTP_NO_OVERLOAD
+#                                           ^^^^^^^^^^^^  ^^^^^^^^
+#                                  Slab name of interest  Optional 
+#                                   or partial slab name  PID to
+#                                EG. "size" or "kmalloc"  monitor
+#
+#           The -d <module> can be added if you want to have the stack unwound with symbols
+#           However it's optional. Ommission will simply mean the stack for module functions
+#           will just show their kernel address not the symbol name.
+#           E.G. -d drm -d i915 -d jbd2 -d xhci_hcd -d mac80211 -d ext4 -d nfsd -d ipt_REJECT -d drm_kms_helper
+#
+# SLAB/SLUB slab allocation is performed in one of two ways
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# 1) You kmem_cache_create() a named slab and request allocations directly into that.
+#    You can use kmem_cache_alloc()    - Get a cache object from the named slab
+#                kmem_cache_free()     - Free/release the object from the named slab
+#                kmem_cache_destroy()  - Release all resources and destroy the cache
+#                                        (You must have previously freed al objects first)
+#                kmem_cache_set_move() - Registers a function that the allocator may call to 
+#                                        move objects from sparsely allocated pages of memory 
+#                                        so that the system can reclaim pages that are tied 
+#                                        up by the client.
+#    The kernel DOES allow you to use the kmalloc-nnnn and size-nnnn names with this method
+#    so it would be erroneous to think they are only applicable to kmalloc/kfree.
+#
+# 2) You let the kernel decide what slab to use to alocate your buffer into. For this, the
+#    kernel has a selection of size-nnnn (RHEL6) and kmalloc-nnnn (RHEL7) named slabs he can
+#    use. When you request an allocation, he uses the size requested to find the most 
+#    appropriate sized slab for your alocation. As a kmalloc caller, you don't know which 
+#    slab the alocation is made into.
+#    You can use kmalloc()             - Allocate a slab object
+#                kfree()               - Free/release a slab object
+#
+#    This second choice is simple to use but the implementation in RHEL6 is more complex
+#    than it is in RHEL7. As a result, especially with the use of compiler "inline"
+#    statements, it's more involved to trace. Accordingly, it's not possible to probe
+#    the calls as you don't know for sure if/where the allcoation takes place so all
+#    probes for this second choice are made on the .return and utilize the $return
+
+# For bz-1487722 - RHEL7.4: Linux nfs server OOM panics after many mount / umount cycles on 
+# sec=krb5 mount, monotonically increasing kmalloc-1024, 128, 512, 192 kmem caches
+
+
+# This script displays the number of given slab allocations and the backtraces leading up to it.
+# In addition, it shows the number of slab frees per process
+
+%{
+#include <linux/slab.h>
+#include <linux/compiler.h>
+%}
+
+global slab = @1
+
+global stats%[5000]                   // The suffix % after an array name is useful
+global stacks%[5000]                  // because it allows you to overwrite the "oldest"
+global stats_free%[5000]              // entries after you hit the max limit
+
+
+%( kernel_v <= "2.6.32" %? 
+#global rhel6size%[5000]               // Need to record all rhel6 size-nnnn object addresses
+global rhel6aloc%[5000]               // Record count by execnames that perform kmalloc's
+global rhel6free%[5000]               // Record count by execnames that perform kfree's
+global kfrees = 0                     // Record total of all rhel6 size-nnnn free()'s
+global kmallocs1 = 0                  // Record total of all rhel6 size-nnnn __kmalloc()'s
+global kmallocs2 = 0                  // Record total of all rhel6 size-nnnn kmem_cache_alloc_trace's
+%)
+
+
+%( kernel_v <= "2.6.32" %? 
+function checkptr:long (addr) %{
+    long obj = STAP_ARG_addr;
+    if (unlikely(ZERO_OR_NULL_PTR(obj))) {
+        STAP_RETURN(0);
+    }
+    STAP_RETURN(obj); 
+%}
+%)
+
+probe begin
+{
+  printf("Press Ctrl/C to terminate (unless you have enabled probe timer)........\n")
+}
+
+
+###############################################################################
+#
+#                NAMED SLAB (kmem_cache_create) TRACING
+#                ======================================
+#
+# For RHEL6 use $cachep     and kernel generic slab names = size-<n>
+# For RHEL7 use $s          and kernel generic slub names = kmalloc-<n>
+
+probe kernel.function("kmem_cache_alloc") { 
+%( kernel_v <= "2.6.32" %? SLAB=$cachep %: SLAB=$s %)
+#        IF             %?    TRUE      %:  FALSE  %)
+        if(((target()) && (pid() == target())) || (!target())) {
+            slabname=kernel_string(SLAB->name)
+            if (isinstr(slabname, slab)) {
+                stats[execname(),slabname] <<< 1
+                stacks[execname(),slabname,backtrace()] <<< 1
+            }
+        }
+}
+
+probe kernel.function("kmem_cache_free") {
+%( kernel_v <= "2.6.32" %? SLAB=$cachep %: SLAB=$s %)
+#        IF             %?    TRUE      %:  FALSE  %)
+        if(((target()) && (pid() == target())) || (!target())) {
+            slabname=kernel_string(SLAB->name)
+            if (isinstr(slabname, slab)) {
+                stats_free[execname(),slabname] <<< 1
+            }
+        }
+}
+
+#
+#                        END OF NAMED SLAB TRACING
+#
+###############################################################################
+
+
+
+###############################################################################
+#
+#                   GENERIC RHEL6 ONLY (kmalloc) SLAB TRACING
+#                   =========================================
+#
+# kmalloc() - Calls to get slab allocated memory buffers
+# ======================================================
+#
+# RHEL6 For size-nnnn, kmalloc() will call __kmalloc() -or- kmem_cache_alloc_trace() 
+# (These probes are NOT required for RHEL7)
+#
+
+%( kernel_v <= "2.6.32" %? probe kernel.function("__kmalloc").return { 
+#        IF             %?                    TRUE                           
+# __kmalloc() is passed only a size and flags, not a *kmem_cache
+        if(((target()) && (pid() == target())) || (!target())) {
+#            rhel6size[pid(),$return] = 1
+            if (execname() != "") { rhel6aloc[execname()] ++ }
+            kmallocs1++
+        } 
+}
+
+
+probe kernel.function("kmem_cache_alloc_trace").return { 
+# kmem_alloc_trace() is passed a cachep to an applicable size-nnnn slab, a size and 
+# flags, so record the details
+        if(((target()) && (pid() == target())) || (!target())) {
+            slabname=kernel_string($cachep->name)
+            if (isinstr(slabname, slab)) {
+                stats[execname(),slabname] <<< 1
+                stacks[execname(),slabname,backtrace()] <<< 1
+#                rhel6size[pid(),$return] = 1
+                if (execname() != "") { rhel6aloc[execname()] ++ }
+                kmallocs2++
+            }
+        } 
+}
+
+
+# probe kernel.function("__drain_alien_cache") { 
+#         IF             %?                    TRUE                           
+#         if(((target()) && (pid() == target())) || (!target())) {
+#             slabname=kernel_string($cachep->name)
+#             if (isinstr(slabname, slab)) {
+#                 stats[execname(),slabname] <<< 1
+# #                stacks[execname(),slabname,backtrace()] <<< 1
+#             }
+#         } 
+# }
+
+
+# kfree() - Calls to release/free a previously allocated memory buffer
+# ====================================================================
+#
+probe kernel.function("kfree").return { 
+                       
+        if(((target()) && (pid() == target())) || (!target())) {
+            if (checkptr($objp)) {                   # only count valid pointers
+#                printf("Object = 0x%016x\n", $objp)
+#                delete rhel6size[pid(),$objp]
+                rhel6free[execname()] ++
+                kfrees++
+            }
+        } 
+} %)
+
+#
+#                        END OF RHEL6 GENERIC SLAB TRACING
+#
+###############################################################################
+
+
+
+###############################################################################
+#
+# Exit after 300 seconds
+probe timer.ms(300000) { exit () }
+
+# foreach ( in <array>)  Display in array order
+# foreach ( in <array>-) Display in Descending order
+# foreach ( in <array>+) Display in Ascending order
+
+probe end {
+        printf("\nNumber of %s slab allocations by process\n", slab)
+        foreach ([exec,slname] in stats-) {
+                printf("%-16s:%-24s:%12d\n",exec,slname,@count(stats[exec,slname]))
+        }
+
+        printf("\nNumber of %s slab frees by process\n", slab)
+        foreach ([exec,slname] in stats_free-) {
+                printf("%-16s:%-24s:%12d\n",exec,slname,@count(stats_free[exec,slname]))
+        }
+
+%( kernel_v <= "2.6.32" %? if (isinstr(slab, "size")) {  
+#        IF             %?                    TRUE 
+            printf("\n\nNumber of RHEL6 \"%s\" slab kmalloc & kfree's by processes\n", slab)
+            printf("Total kmalloc's (__kmalloc) = %d - (kmem_cache_alloc_trace) = %d - Total kfree's = %d\n\n", kmallocs1, kmallocs2, kfrees)
+ 
+            printf("\nkmalloc's:\n")
+            foreach (count in rhel6aloc-) {
+                printf("%-16s:%12d\n",count,rhel6aloc[count])
+            }
+
+            printf("\nkfree's:\n")
+            foreach (count in rhel6free-) {
+                printf("%-16s:%12d\n",count,rhel6free[count])
+            }
+        } %)
+
+        printf("\nBacktrace of processes when allocating\n")
+        foreach ([proc,cache,bt] in stacks) {
+                printf("Exec: %-16s Name: %-16s  Count: %12d\n",proc,cache,@count(stacks[proc,cache,bt]))
+                print_stack(bt)
+                printf("\n-------------------------------------------------------\n\n")
+        }
+}
+

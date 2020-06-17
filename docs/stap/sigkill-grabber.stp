@@ -1,0 +1,21 @@
+#! /usr/bin/env stap
+# 
+# Author: Kyle Walker 
+
+probe begin {
+        printf("Now monitoring for SIGKILL signals")
+}
+
+probe signal.send
+{
+            if(sig_name=="SIGKILL")
+                    {
+                                    printf("%-25s: sig.send: %s was sent to %s (pid:%d) by %s (pid:%d) uid:%u using %s\n",tz_ctime(gettimeofday_s()),sig_name,pid_name,sig_pid,execname(),pid(),uid(),name)
+                                        }
+}
+
+probe syscall.kill
+{
+        destpid=strtol(tokenize(argstr," "),10);
+                printf("%-25s: sys.kill: %s(%d) called kill %s killed %s\n",tz_ctime(gettimeofday_s()),execname(),pid(),argstr,pid2execname(destpid));
+}

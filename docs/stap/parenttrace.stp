@@ -1,0 +1,27 @@
+#!/usr/bin/stap
+#
+#############################################################
+## parenttrace.stp
+## Author: Kyle Walker <kwalker@redhat.com>
+## A tap to find a process parentage back to init when a
+## number of different signals are captured.
+#############################################################
+
+global parent;
+
+probe begin {
+    printf("Now monitoring for the trigger indicated: Signal 15 SIGTERM, 9 SIGKILL, or 6 SIGABRT\n");
+}
+
+probe signal.send {
+    if(sig == 15 || sig == 9 || sig == 6) {
+        currenttask = task_current();
+        parent = task_parent(currenttask);
+        printf("%s sent by %s[%d] to process %s[%d] who was forked from <- %s[%d]", sig_name, task_execname(currenttask), task_pid(currenttask), pid_name, sig_pid, task_execname(parent), task_pid(parent));
+        while (task_pid(parent) >= 1) {
+            parent = task_parent(parent);
+            printf(" <- %s[%d]", task_execname(parent), task_pid(parent));
+        }
+        printf("\n");
+    }
+}
