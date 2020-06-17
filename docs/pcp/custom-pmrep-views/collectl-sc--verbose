@@ -1,0 +1,65 @@
+[collectl-sc--verbose]
+# User  Nice   Sys  Wait   IRQ  Soft Steal Guest NiceG  Idle  CPUs  Intr  Ctxsw  Proc  RunQ   Run   Avg1  Avg5 Avg15 RunT BlkT
+header = yes
+repeat_header = 30
+unitinfo = no
+globals = no
+timestamp = yes
+precision = 2
+delimiter = " "
+# User
+User = User,,,,7
+User.formula = 100 * kernel.all.cpu.user / hinv.ncpu
+User.unit = s
+# Nice
+Nice = Nice,,,,7
+Nice.formula = 100 * kernel.all.cpu.nice / hinv.ncpu
+Nice.unit = s
+# Sys
+Sys = Sys,,,,7
+Sys.formula = 100 * kernel.all.cpu.sys / hinv.ncpu
+Sys.unit = s
+# Wait
+Wait = Wait,,,,7
+Wait.formula = 100 * kernel.all.cpu.wait.total / hinv.ncpu
+Wait.unit = s
+# IRQ
+IRQ = IRQ,,,,7
+IRQ.formula = 100 * kernel.all.cpu.irq.hard / hinv.ncpu
+IRQ.unit = s
+# Soft
+Soft = Soft,,,,7
+Soft.formula = 100 * kernel.all.cpu.irq.soft / hinv.ncpu
+Soft.unit = s
+# Steal
+Steal = Steal,,,,7
+Steal.formula = 100 * kernel.all.cpu.steal / hinv.ncpu
+Steal.unit = s
+# Guest
+Guest = Guest,,,,7
+Guest.formula = 100 * kernel.all.cpu.guest / hinv.ncpu
+Guest.unit = s
+# NiceG
+NiceG = NiceG,,,,7
+NiceG.formula = 100 * kernel.all.cpu.guest_nice / hinv.ncpu
+NiceG.unit = s
+# Idle
+Idle = Idle,,,,7
+Idle.formula = 100 * kernel.all.cpu.idle / hinv.ncpu
+Idle.unit = s
+# CPUs
+hinv.ncpu = CPUs,,,,4
+# Intr
+kernel.all.intr = Intr/s,,,,9
+# Ctxsw
+kernel.all.pswitch = Ctxsw/s,,,,9
+# RunQ
+kernel.all.runnable = RunQ,,,,7
+# Run
+kernel.all.running = Run,,,,7
+# Avg1/5/15
+kernel.all.load = ldavg,,,,
+# RunT
+# kernel.all.running = RunT,,,,7
+# BlkT
+kernel.all.blocked = BlkT,,,,7
