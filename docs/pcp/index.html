@@ -158,35 +158,6 @@ network.interface.in.bytes                   ← Metric
   </div>
 </section>
 
-<section class="section">
-  <div class="container">
-    <h1 class="title">Basic Example Commands</h1>
-    <div class="content">
-<pre>
-pcp collectl -s c --verbose
-</pre>
-<p>PCP runs a script which uses the PCP API to produce collectl-like output</p>
-<pre>
-pmrep :sar-B-old-kernel
-</pre>
-<p>pmrep produces paging activity represented in a SAR-like fashion</p>
-<pre>
-pmrep :vmstat
-</pre>
-<p>pmrep produces output similar to the vmstat tool</p>
-<pre>
-pcp mpstat -P ALL
-</pre>
-<p>CPU usage is presented for all CPUs via a script using the PCP API</p>
-<pre>
-pmrep :sar-u-ALL-P-ALL
-</pre>
-<p>CPU usage is presented for all CPUs similar to SAR</p>
-    </div>
-  </div>
-</section>
-
-
 
 <section class="section">
   <div class="container">
@@ -228,17 +199,80 @@ pmrep :sar-u-ALL-P-ALL
             binary data files</li>
           <li>The files ending in <code>.index</code> and <code>.meta</code> are
             the temporal index file and the meta data file for the data set
-            respectively</ul>
+            respectively</li>
+        </ul>
+        <li><code>pmdumplog -L</code> can dump information about the archive
+          including details about the timezone it came from, the time period the
+          archive covers, and the host it comes from.</li>
       </ul>
     </div>
 
 
     <h2 class="subtitle">Common Options</h2>
+    <div class="content">
+      <ul>
+        <li> <code>-a/--archive</code> Nearly all pcp tooling comes with this
+          option and indicates to use the archive file created from pmlogger as
+          the source for data rather than the current system.</li>
+        <li><code>-t/--interval=</code> Nearly all pcp tooling comes with this
+          option and describes the interval on which metrics are reported. IE
+          metrics can be reported on the 10 minute interval like default SAR
+          configurations or down to the 5 second inteval for higher resolution
+          investigations.</li>
+        <li><code>-z/--hostzone</code> Nearly all pcp tooling comes with this
+          option and informs to report time stamps and dates from the
+          perspective of the timezone the data was collected in rather than the
+          timezone the data is being reviewed in. IE if an archive comes from a
+          system in Pacific Timezone while the system used to inspect the data
+          in the Eastern Standard Timezone, the times and dates will be
+          interpreted from the EST perspective by default but form the PST
+          timezone if <code>-z</code> is provided.</li>
+        <li><code>-S/-T <[‘@ DAY MON #] HH:MM[:SS YYYY’]></code> Tells the tool
+          to begin reporting at (<code>-S</code>) or record up to (<code>-T</code>)
+          the timestamp provided.</li>
+      </ul>
+    </div>
+
+
+    <section class="section">
+      <div class="container">
+        <h2 class="subtitle">Basic Example Commands</h2>
+        <div class="content">
+<pre>
+pmrep :sar-B-old-kernel -z -a 20200629.00.10
+</pre>
+<p>pmrep produces paging activity represented in a sar like fashion (<code>
+  :sar-B-old-kernel</code>) from the archive that began at 12:10 AM on June 29
+  2020 (<code>-a 20200629.00.10</code>) and the data needs to be interpreted
+  from the source host timezone at the default 1 second interval.</p>
+<pre>
+pmrep :vmstat -t 30s
+</pre>
+<p>pmrep produces output similar to the vmstat tool (<code>:vmstat</code>). The
+  data is sampled every 30 seconds (<code>-t 30s</code>).</p>
+<pre>
+pmrep :sar-u-ALL-P-ALL -t 1m -z -a 20200629.00.10 -S '10:00:00'
+</pre>
+<p>CPU usage is presented for all CPUs similar to SAR (
+  <code>:sar-u-ALL-P-ALL</code>), averaged over a 1 minute interval (<code>-t 1m
+  </code>) where metrics are from the source system's timezone (<code>-z</code>),
+  the metrics are sourced from the archive starting at 12:10 AM on June 29
+  2020 (<code>-a 20200629.00.10</code>), but begin reporting metrics captured
+  after 10 AM.</p>
+        </div>
+      </div>
+    </section>
+
+
     <h2 class="subtitle">Common Workflow</h2>
     <div class="content">
       <ol>
         <li><code>pcp-zeroconf</code> is a one-shot package to install and start
           necessary components for general support</li>
+          <!-- 1) install pcp zero-conf
+               2) wait for reproduction
+               3) pmdumplog -z -L blah
+               4) sar analysis-->
       </ol>
     </div>
   </div>
