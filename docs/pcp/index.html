@@ -140,6 +140,9 @@ network.interface.in.bytes                   ← Metric
         <li><code>pmrep</code> Performance metrics reporter. A highly
           customizable tool to present metrics nearly however desired. Most
           analysis with PCP data is done with pmrep.</li>
+        <li><code>pmdumplog</code> Dumps information about archives created with
+          pmlogger including what metrics were collected, what the instances and
+          instance domains were, what times does the archive span, etc.</li>
       </ul></p>
     </div>
   </div>
@@ -267,17 +270,135 @@ pmrep :sar-u-ALL-P-ALL -t 1m -z -a 20200629.00.10 -S '10:00:00'
     <h2 class="subtitle">Common Workflow</h2>
     <div class="content">
       <ol>
-        <li><code>pcp-zeroconf</code> is a one-shot package to install and start
-          necessary components for general support</li>
-          <!-- 1) install pcp zero-conf
-               2) wait for reproduction
-               3) pmdumplog -z -L blah
-               4) sar analysis-->
+        <li>Install <code>pcp-zeroconf</code>
+          <ul>
+            <li><code>pcp-zeroconf</code> is a one-shot package to install and
+              start necessary components for general support.
+            <li><code># yum install pcp-zeroconf</code></li>
+            <li>The package is available in the <code>rhel-7-server-rpms</code>
+              repository for RHEL 7 and
+              <code>rhel-8-for-x86_64-appstream-rpms</code> repository for RHEL
+              8.</li>
+            <li>For RHEL 6 and under, PCP is discouraged from use.</li>
+          </ul></li>
+        <li>Wait for the issue to be reproduced and gather a fresh sosreport
+          with timestamps of the occurance of the issue. Should the sosreport
+          not contain the archives in the default location
+          <code>/var/log/pcp/pmlogger/&lt;HOSTNAME&gt;/</code>, request a
+          tarball of the archives.</li>
+        <li> Use <code>pmdumplog -z -L &lt;ARCHIVE&gt;</code> to determine which
+          archives span times of interest.
+          <ul><li>For example;
+<pre>
+ r8 # pmdumplog -z -L /var/log/pcp/pmlogger/r8/20200630.00.10.0.xz
+Note: timezone set to local timezone of host "r8" from archive
+
+Log Label (Log Format Version 2)
+Performance metrics from host r8
+    commencing Tue Jun 30 00:10:43.866245 2020
+    ending     Tue Jun 30 13:36:23.894761 2020
+Archive timezone: EDT+4
+PID for pmlogger: 18738
+</pre>
+          </li></ul>
+        <li>Begin analysis. Given the workflow for reviewing performance metrics
+          historically been to review SAR and then collectl, the following steps
+          recreate this workflow.</li>
+        <p class="subtitle">SAR-Like Analysis</p>
+        <ul>
+          <li>CPU usage</li>
+          <ul>
+            <li><code>pmrep :sar-u-ALL-P-ALL</code></li>
+            <li><code>pmrep :sar-u-ALL</code></li>
+            <li><code>pmrep :sar</code></li>
+            <li><code>pcp atopsar -c</code></li>
+          </ul>
+          <li>Processes and Context Switches Per Second</li>
+          <ul><li><code>pmrep :sar-w</code></li></ul>
+          <li>Swap activity</li>
+          <ul><li><code>pmrep :sar-w</code></li></ul>
+          <li>Page scan and reclaim activity</li>
+          <ul>
+            <li><code>pmrep :sar-B-old-kernel</code> for RHEL 7</li>
+            <li><code>pmrep :sar-B</code> for RHEL 8</li>
+          </ul>
+          <li>System-wide IO activity</li>
+          <ul><li><code>pmrep :sar-b</code></li></ul>
+          <li>Memory usage stats</li>
+          <ul><li><code>pmrep :sar-r</code></li></ul>
+          <li>Swap usage</li>
+          <ul><li><code>pmrep :sar-S</code></li></ul>
+          <li>Hugepages</li>
+          <ul><li><code>pmrep :sar-H</code></li></ul>
+          <li>Load average and process states</li>
+          <ul><li><code>pmrep :sar-q</code></li></ul>
+          <li>Per-device IO activity</li>
+          <ul>
+            <li><code>pmrep :sar-d-dev</code></li>
+            <li><code>pmrep :sar-d-dm</code></li>
+          </ul>
+          <li>Network throughput metrics</li>
+          <ul><li><code>pmrep :sar-n-DEV</code></li></ul>
+          <li>Network error metrics</li>
+          <ul><li><code>pmrep :sar-n-EDEV</code></li></ul>
+          <li>NFS Client metrics</li>
+          <ul><li><code>pmrep :sar-n-NFSv4</code></li></ul>
+          <li>NFS Server metrics</li>
+          <ul><li><code>pmrep :sar-n-NFSDv4</code></li></ul>
+          <li>Network socket</li>
+          <ul><li><code>pmrep :sar-n-SOCK</code></li></ul>
+        </ul>
+        <p class="subtitle">Collectl-like Analysis</p>
+        <p>For most of collectl-like analysis, you can lower the interval to a
+          much more frequent interval to gain the higher resolution capabilities
+          provided from collectl. However, for collectl-specific metric output,
+          custom pmrep views found <a href='https://github.com/haithcockce/learning-stuff/tree/master/docs/pcp/custom-pmrep-views/'>
+          here</a> for pmrep. The configs can be added to the default pmrep
+          configuration file <code>/etc/pcp/pmrep/pmrep.conf</code> or added to
+          a separate file and used with pmrep with the <code>-c &lt;FILE&gt;</code>
+          option.</p>
       </ol>
     </div>
   </div>
 </section>
 
+
+
+
+<section class="section">
+  <div class="container">
+    <h1 class="title is-spaced">Common Issues</h1>
+    <div class="content">
+      <ul>
+        <li>Running pmrep or other tools against an archive produces something
+          similar to the following:
+  <pre>
+   r7 # pcp -a /var/log/pcp/pmlogger/r7/20190208.09.30 dmcache
+  Error: not all required metrics are available
+  Missing: ['dmcache.cache.used', ... , 'dmcache.write_misses']
+  </pre>
+          The above error typically indicates the tool, pmrep view, etc needs a specific
+          metric that is not collected in the archive. The archive can be checked
+          it truly lacks to metrics in question with <code>pminfo</code> or
+          <code>pmdumplog</code>.</li>
+        <li>The output is missing values across several different tools. Check
+          the PMCD and pmlogger logs. Example logs:
+<pre>
+$ less var/log/pcp/pmlogger/&lt;HOSTNAME&gt;/pmlogger.log
+Warning [/var/lib/pcp/config/pmlogger/config.default, line 96]
+Description unavailable for metric "mem.util.swapFree" ... not logged
+Reason: No PMCD agent for domain of request
+
+$ less var/log/pcp/pmcd/pmcd.log
+[Tue Oct  8 13:46:24] pmcd(34290) Warning: pduread: timeout (after 5.000
+sec) while attempting to read 12 bytes out of 12 in HDR on fd=19
+</pre>
+          If a PMDA dies, the PMCD logs will indicate it can not read from the
+          PMDA as noted above.</li>
+      </ul>
+    </div>
+  </div>
+</section>
 
 </body>
 </html>
