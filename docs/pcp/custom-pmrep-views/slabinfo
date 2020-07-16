@@ -1,0 +1,18 @@
+[slabinfo]
+header = yes
+unitinfo = no
+globals = no
+timestamp = yes
+width = 9
+precision = 2
+delimiter = " "
+colxrow = "               Slab Name"
+repeat_header = 1
+mem.slabinfo.objects.active          = active_objs,,,,11
+mem.slabinfo.objects.total           = total_objs,,,,10
+mem.slabinfo.objects.size            = obj_sz,,,,6
+mem.slabinfo.slabs.active            = active_slabs,,,,12
+mem.slabinfo.slabs.total             = total_slabs,,,,11
+mem.slabinfo.slabs.pages_per_slab    = pgs/slab,,,,8
+mem.slabinfo.slabs.objects_per_slab  = objs/slab,,,,10
+mem.slabinfo.slabs.total_size        = tot_sz,,,,10
