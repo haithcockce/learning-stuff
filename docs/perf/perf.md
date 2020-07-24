@@ -505,10 +505,6 @@ if __name__ == '__main__':
 - For the workqueue example, why trace only the `workqueue_queue_work` event and not trace the `kworker` activity directly? 
 
 
-# CRUNCH TRAINING
-
-
-
 #### Dynamic Kernel Tracing
 
 - The kernel has a number of built in tracepoints, however, despite the larger number of tracepoints, sometimes you need extremely specific instances of tracing done (or a subsystem may not have many tracepoints to begin with such as most of Infiniband). 
