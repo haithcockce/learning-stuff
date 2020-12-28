@@ -15,4 +15,11 @@ mem.slabinfo.slabs.active            = active_slabs,,,,12
 mem.slabinfo.slabs.total             = total_slabs,,,,11
 mem.slabinfo.slabs.pages_per_slab    = pgs/slab,,,,8
 mem.slabinfo.slabs.objects_per_slab  = objs/slab,,,,10
-mem.slabinfo.slabs.total_size        = tot_sz,,,,10
+# mem.slabinfo.slabs.total_size        = tot_sz,,,,10
+# Excluding above, as according to `pminfo -d` output, mem.slabinfo.slabs.total_size 
+# is the total memory usage of active objects rather than the amount of slabs * pages
+# per slab
+total_mem_usage                      = mem.slabinfo.slabs.total_size
+total_mem_usage.formula              = mem.slabinfo.slabs.total * mem.slabinfo.slabs.pages_per_slab * 4 / 1024
+total_mem_usage.label                = Total Memory Usage
+total_mem_usage.width                = 10
