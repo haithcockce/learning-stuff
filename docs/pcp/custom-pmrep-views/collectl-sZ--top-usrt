@@ -4,7 +4,7 @@
 dynamic_header = yes
 rank = 10
 predicate = proc.psinfo.utime
-sort_metric = -proc.psinfo.utime
+sort_metric = proc.psinfo.utime
 header = yes
 repeat_header = 1
 unitinfo = no
