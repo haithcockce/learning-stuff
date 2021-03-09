@@ -31,12 +31,13 @@ Start and enable the service
 
 - The typical command is as follows:
 
-    # collectl -o <D|T> -s <SUBSYS> --verbose -p <archive> [--from <TIMESTAMP>] [--thru <TIMESTAMP>]
-  
-  - `-o <D|T>` provides either date and time or just timestamps to samples, respectively. When looking through several days of data, `-o D` is preferred while `-o T` will suffice when looking at a single day.
-  - `-s <SUBSYS>` denotes which metrics (subsystems) you want to view. More to be discussed later.
-  - `-p <archive>` denotes reading collectl metrics from the archive file provided.
-  - Optionally, `--from <TIMESTAMP>` and `--thru <TIMESTAMP>` can be provided to tell collectl to skip printing metrics before the `--from` timestamp and after `--thru` timestamp. `<TIMESTAMP>` is of the form `HH:MM:SS`.
+```bash
+# collectl -o <D|T> -s <SUBSYS> --verbose -p <archive> [--from <TIMESTAMP>] [--thru <TIMESTAMP>]
+```
+   - `-o <D|T>` provides either date and time or just timestamps to samples, respectively. When looking through several days of data, `-o D` is preferred while `-o T` will suffice when looking at a single day.
+   - `-s <SUBSYS>` denotes which metrics (subsystems) you want to view. More to be discussed later.
+   - `-p <archive>` denotes reading collectl metrics from the archive file provided.
+   - Optionally, `--from <TIMESTAMP>` and `--thru <TIMESTAMP>` can be provided to tell collectl to skip printing metrics before the `--from` timestamp and after `--thru` timestamp. `<TIMESTAMP>` is of the form `HH:MM:SS`.
 
 ## Subsystems
 
@@ -56,6 +57,7 @@ Start and enable the service
 | x | Interconnect | X | interconnect ports/rails (Infiniband/Quadrics) |
 | y\* | Slabs (system object caches) | Y\* | slabs/slubs |
 
+- \* means enabled by default.
 - Options come in "brief", "verbose", and "detail" flavors. 
   - Brief is a quick overview of a subsystems metrics. For example, CPU info here is limited to %sys, interrupts/s, and context switches/s and total active time over that interval as a percentage. Percentages here are averaged across all CPUs. Options designated as "brief" are lowercase letters (IE `-s cdm`)
   - Verbose is detailed summary data. For example, CPU info here is quite detailed but still averaged across all CPUs. This requires `--verbose` flag in tandem with "brief" options (IE `-s cdm --verbose`) 
