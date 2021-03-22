@@ -32,52 +32,42 @@
 
 ### SLAB/SLUB Troubleshooting
 
+#### Single state overview of slab usage
+
 - `/proc/meminfo` provides memory usage in terms of KiB system wide
-
-```bash
-[...]
-Slab:             128560 kB
-SReclaimable:      51348 kB
-SUnreclaim:        77212 kB
-[...]
-```
-
-- Field description:
-
+  ```bash
+  [...]
+  Slab:             128560 kB
+  SReclaimable:      51348 kB
+  SUnreclaim:        77212 kB
+  [...]
+  ```
   - `Slab:` the size of all memory consumption by slab/slub and should be the sum of `SReclaimable` and `SUnreclaim`
   - `SReclaimable:` the size of reclaimable slab caches
   - `SUnreclaim:` the size of unreclaimable cache
 
 - `/proc/zoneinfo` provides memory usage in terms of pages on a per-zone basis
-
-```bash
-Node 0, zone      DMA
-  per-node stats
-[...]
-      nr_slab_reclaimable 12899
-      nr_slab_unreclaimable 19358
-```
-
-- Field descriptions
-
+  ```bash
+  Node 0, zone      DMA
+    per-node stats
+  [...]
+        nr_slab_reclaimable 12899
+        nr_slab_unreclaimable 19358
+  ```
   - `nr_slab_[un]reclaimable` provides similar statistics to `/proc/meminfo` for that zone in terms of pages
 
 - `/proc/slabinfo`
-
-```bash
-slabinfo - version: 2.1
-# name            <active_objs> <num_objs> <objsize> <objperslab> <pagesperslab> : tunables <limit> <batchcount> <sharedfactor> : slabdata <active_slabs> <num_slabs> <sharedavail>
-nf_conntrack          48     84    320   12    1 : tunables    0    0    0 : slabdata      7      7      0
-kvm_async_pf           0      0    168   24    1 : tunables    0    0    0 : slabdata      0      0      0
-kvm_vcpu               0      0  15104    2    8 : tunables    0    0    0 : slabdata      0      0      0
-kvm_mmu_page_header      0      0    168   24    1 : tunables    0    0    0 : slabdata      0      0      0
-x86_emulator           0      0   2672   12    8 : tunables    0    0    0 : slabdata      0      0      0
-x86_fpu                0      0   4160    7    8 : tunables    0    0    0 : slabdata      0      0      0
-[...]
-```
-
-- There's a good amount of columns here, but the key ones are as follows:
-
+  ```bash
+  slabinfo - version: 2.1
+  # name            <active_objs> <num_objs> <objsize> <objperslab> <pagesperslab> : tunables <limit> <batchcount> <sharedfactor> : slabdata <active_slabs> <num_slabs> <sharedavail>
+  nf_conntrack          48     84    320   12    1 : tunables    0    0    0 : slabdata      7      7      0
+  kvm_async_pf           0      0    168   24    1 : tunables    0    0    0 : slabdata      0      0      0
+  kvm_vcpu               0      0  15104    2    8 : tunables    0    0    0 : slabdata      0      0      0
+  kvm_mmu_page_header      0      0    168   24    1 : tunables    0    0    0 : slabdata      0      0      0
+  x86_emulator           0      0   2672   12    8 : tunables    0    0    0 : slabdata      0      0      0
+  x86_fpu                0      0   4160    7    8 : tunables    0    0    0 : slabdata      0      0      0
+  [...]
+  ```
   - `name` the name of the slab cache
   - `pagesperslab` the amount of pages in a single slab for the named slab cache
   - `num_slabs` the amount of slabs currently allocated for the named slab cache
@@ -86,20 +76,18 @@ x86_fpu                0      0   4160    7    8 : tunables    0    0    0 : sla
   used for things other than slab until that page is reclaimed. As such, even if a page of memory has no slab objects in it, _that page of 
   memory is still used for slab and is not free for use until reclaim_. 
 - As such calculating memory usage by named slab cache is done by calculating the amount of slabs by the pages per slab: 
-
-```bash
-$ grep -v -e active_objs -e slabinfo proc/slabinfo | \
-    awk '{ slab_cache[$1] += ($6 * $15 * 4) } END { for (slab_name in slab_cache) { printf "%20s %10s KiB\n", slab_name, slab_cache[slab_name] } }' | \
-    sort -nrk 2 | \
-    head
-```
-
-- Description
-
+  ```bash
+  $ grep -v -e active_objs -e slabinfo proc/slabinfo | \
+      awk '{ slab_cache[$1] += ($6 * $15 * 4) } END { for (slab_name in slab_cache) { printf "%20s %10s KiB\n", slab_name, slab_cache[slab_name] } }' | \
+      sort -nrk 2 | \
+      head
+  ```
   - The `grep` command filters out noise for the awk command to parse 
   - The `awk` command creates a list of named slab caches and associates calculates the size of each in KiB
   - The rest sorts the output based on memory consumption and prints only the top 10
   - _**Note, the above command is for x86 systems. s390 and ppc use 64 KiB page sizes so replace the '4' in the awk command with '64'**_
+
+#### Slab growth over time
 
 - Collectl
 
@@ -108,6 +96,21 @@ $ grep -v -e active_objs -e slabinfo proc/slabinfo | \
 - PCP
 
   - There is no default view in PCP allow checking per-slab cache breakdown of slab usage. You can use [this `pmrep` view](https://raw.githubusercontent.com/haithcockce/learning-stuff/master/docs/pcp/custom-pmrep-views/slabinfo) to produce `/proc/slabinfo` like data
+
+#### Tracking who allocates slab object
+
+- [Main KCS](https://access.redhat.com/solutions/358933)
+  - [Is there a way to track slab allocations or leaks with systemtap?](https://access.redhat.com/articles/2850581)
+  - [How to track slab allocations using perf](https://access.redhat.com/solutions/2850631)
+- Tracking with `slub_debug=UT,<slab cache>`
+  - Tracks userspace entities doing allocations and frees (`U`) and info can be found in `/sys/kernel/slab/<slab cache>/{alloc,free}_calls`
+  ```
+   r7 # cat /sys/kernel/slab/dentry/alloc_calls 
+  25105 __d_alloc+0x25/0x1b0 age=3/223703/229786 pid=0-8265 cpus=0-1
+  ```
+  - **_Use with caution_** It can overwhelm a system printing backtraces
+  - You may need to expand the kernel ring buffer size as 
+
 
 # The rest of this is under construction
 
