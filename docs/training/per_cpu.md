@@ -13,7 +13,7 @@
   - The definition signature is `DEFINE_PER_CPU(type, name)` where `type` is a struct type and `name` is what to call the per-cpu variable 
   - E.g. `static DEFINE_PER_CPU(struct delayed_work, vmstat_work);` creates a per-cpu variable named `vmstat_work` that is of type `delayed_work`, a struct type defined in `include/linux/workqueue.h`
   - Variations exist for the macro which optimize based on various things
-    - `DECLARE_PER_CPU_ALIGNED` creates cache-line aligned per-cpu variables
+    - `DEFINE_PER_CPU_ALIGNED` creates cache-line aligned per-cpu variables
     - `DEFINE_PER_CPU_READ_MOSTLY` creates per-cpu variables where the CPU can confidently prefetch instructions for it
   - Inherently, because these are defined on boot, no functions really exist to deallocate the memory allocated via `DEFINE_PER_CPU`.
 
