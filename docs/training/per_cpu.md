@@ -6,6 +6,7 @@
 
 #### Statically-defined per-cpu variables
 
+- Per-CPU variables are sometimes referred to as `pcp`, unrelated to performance co-pilot.
 - Similar to statically and dynamically defined variables in programs, the kernel allocates statically defined variables on boot 
 - Each CPU has an area of memory dedicated to statically and dynamically defined variables
 - Each CPU contains a _base address_ denoting its starting point for its copies of the per-cpu variables
@@ -125,7 +126,48 @@
         partial = 0x0
       }
       ```
+      
+## Interacting with certain Per CPU variables
 
+- Pcp variables have a number of macros defined to help facilitate interacting with certain pcp variables:
+
+  ```c
+  include/linux/percpu-defs.h
+  [...]
+  #define this_cpu_ptr(ptr)                                               \
+  ({                                                                      \
+          __verify_pcpu_ptr(ptr);                                         \
+          SHIFT_PERCPU_PTR(ptr, my_cpu_offset);                           \
+  })
+  [...]
+  /*
+   * Operations with implied preemption/interrupt protection.  These
+   * operations can be used without worrying about preemption or interrupt.
+   */
+  #define this_cpu_read(pcp)              __pcpu_size_call_return(this_cpu_read_, pcp)
+  #define this_cpu_write(pcp, val)        __pcpu_size_call(this_cpu_write_, pcp, val)
+  #define this_cpu_add(pcp, val)          __pcpu_size_call(this_cpu_add_, pcp, val)
+  #define this_cpu_and(pcp, val)          __pcpu_size_call(this_cpu_and_, pcp, val)
+  #define this_cpu_or(pcp, val)           __pcpu_size_call(this_cpu_or_, pcp, val)
+  #define this_cpu_add_return(pcp, val)   __pcpu_size_call_return2(this_cpu_add_return_, pcp, val)
+  #define this_cpu_xchg(pcp, nval)        __pcpu_size_call_return2(this_cpu_xchg_, pcp, nval)
+  #define this_cpu_cmpxchg(pcp, oval, nval) \
+          __pcpu_size_call_return2(this_cpu_cmpxchg_, pcp, oval, nval)
+  #define this_cpu_cmpxchg_double(pcp1, pcp2, oval1, oval2, nval1, nval2) \
+          __pcpu_double_call_return_bool(this_cpu_cmpxchg_double_, pcp1, pcp2, oval1, oval2, nval1, nval2)
+
+  #define this_cpu_sub(pcp, val)          this_cpu_add(pcp, -(typeof(pcp))(val))
+  #define this_cpu_inc(pcp)               this_cpu_add(pcp, 1)
+  #define this_cpu_dec(pcp)               this_cpu_sub(pcp, 1)
+  #define this_cpu_sub_return(pcp, val)   this_cpu_add_return(pcp, -(typeof(pcp))(val))
+  #define this_cpu_inc_return(pcp)        this_cpu_add_return(pcp, 1)
+  #define this_cpu_dec_return(pcp)        this_cpu_add_return(pcp, -1)
+  ```
+  
+  - The macro names indicate what the functionality is. E.g. 
+    - `this_cpu_read` implies simply reading a pcp variable
+    - `this_cpu_inc` implies incrementing the pcp variable
+    - `this_cpu_ptr` implies fetching the pointer to the current CPU's pcp variable in question
 
 ## References
 
