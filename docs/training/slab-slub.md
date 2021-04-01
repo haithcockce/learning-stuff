@@ -114,20 +114,28 @@
 
 # The rest of this is under construction
 
-## Slab Management Overview
+## Deeper Slab Management Overview
 
-- Creating a slab cache is straightforward. Calling `kmem_cache_create` performs the following steps;
-  - For each numa node, create a `kmem_cache_node` structure to maintain per-numa node slab cache bits
-  - For each possible CPU, create a local `kmem_cache_cpu` structure to maintain the per-cpu slab cache bits
 - "Free" objects are organized as a "linked list" 
-  - A "free" object will actually contain a pointer to the next "free" object. <img align="right" src="https://static.lwn.net/images/ns/kernel/slub-freelist.png">
-  - Allocating from the "list" adjusts the linked list "head pointer" (`void* freelist`) to the next free object
-  - Freeing from the list simply overwrites the object with a pointer to the original next free object and updates the freelist pointer
+
+    - A "free" object will actually contain a pointer to the next "free" object located on the same slab. <img align="right" src="https://static.lwn.net/images/ns/kernel/slub-freelist.png">
+    - Allocating from the "list" adjusts the linked list "head pointer" (`void* freelist`) to the next free object
+    - Freeing from the list simply overwrites the object with a pointer to the original next free object and updates the freelist pointer
+
+- SLUB has a good amount of debugging and sanity checking features built in (some are enabled and others are not). A SLUB object, for example, contains many things beyond just the cached object: <img align="right" src="https://github.com/haithcockce/learning-stuff/blob/master/docs/training/slub-object-layout.png?raw=true">
+
+    - When an object is actually caching something, the _redzone_ behind the cached object (_payload_ in the picture) can detect if something wrote beyond the size of the object. If the redzone value does not match the `RED_ACTIVE` "magic number", then the object or slub page is corrupted potentially
+    - When an object is not in use (and thus free to use by someone), the object area is filled with the freelist pointer and a poison value. If the object is used by someone but the object is just the poison value, then someone else freed the object from under us.
+
+- A slab cache is described by the `kmem_cache` structure, and all slab caches across the system are stored in the global list, `slab_caches` (protected by the `slab_mutex`). Some of the `kmem_cache` struct members are self explanatory (`object_size` for example) but others are not.
+
+    - `*cpu_slab` the offset from the per-cpu base address for the per-cpu `kmem_cache_cpu` struct discussed later on,
+    - `offset` a slub object contains a fair bit of additional "stuff" to account for cacheline things as well as debugging purposes. Behind the cached object area is some padding and then the pointer to the next free object. For the "linked list" noted above, this is the `next` pointer typically seen in linked list structures.
 - Each slab cache has both a local, per-cpu bit of slab cache info and a per-numa node bit of slab cache info
   - For optimizations, the per-cpu slab cache, `kmem_cache_cpu` contains a small subset of the slabs for the slab cache
-    - `freelist` a pointer pointing to the first free object on a page of slab
-    - `page` a pointer to the slab page `freelist` may point to. This will be the first page checked when allocating locally.
-    - `partial` a pointer to a slab page that has some objects allocated and others freed. A separate page pointer from `page` sometimes. This will be the backup page to check if `page` doesn't have any free objects.
+    - `freelist` points to the first free object on a page of slab
+    - `page` points to the slab page `freelist` resides in. This will be the first page checked when allocating locally.
+    - `partial` points to a slab page that has some objects allocated and others freed. Sometimes is the same pointer as `page` and sometimes not. This will be the backup page to check if `page` doesn't have any free objects.
   - The per-numa node slab cache bits, `kmem_cache_node` allows synchronous access to objects shared across them but is slower
     - `list_lock` prevents concurrent updates to its lists of slabs
     - `nr_partial` a count of the amount of partial slabs it has for that slab cache
@@ -138,12 +146,177 @@
 
 ### Logicflows for Interacting With Slab
 
+#### Creating a slab cache
+
+0. Do various sanity checks and then try to merge the newly requested slab cache into an existing slab cache.
+
+    - Walk the list of slab caches backwards (kmem_cache, kmem_cache_node, kmalloc-8, kmalloc-16, etc)
+    - If the current slab cache can be merged into, and it can fit the objects (technically first fit algorithm, but the order of caches walked makes it a best fit algorithm), then use that slab cache, returning it to the caller. 
+    - **Note** this means if merged, you could get a pointer to a cache like `kmalloc-64` or something. This shouldn't matter, however, as the kernel has guaranteed the slab cache can hold the objects you will be using.
+    - `mm/slab_common.c`: `kmem_cache_create` &#8594; `kmem_cache_create_usercopy`
+
+        ```c
+        struct kmem_cache *
+        kmem_cache_create_usercopy(const char *name,
+                          unsigned int size, unsigned int align,
+                          slab_flags_t flags,
+                          unsigned int useroffset, unsigned int usersize,
+                          void (*ctor)(void *))
+        {
+                struct kmem_cache *s = NULL;
+                const char *cache_name;
+                int err; 
+        [...]
+                // if we didn't deliberately set a size, try and merge!
+                if (!usersize)
+                        s = __kmem_cache_alias(name, size, align, flags, ctor);
+
+        mm/slub.c: 
+
+        struct kmem_cache *
+        __kmem_cache_alias(const char *name, unsigned int size, unsigned int align,
+                           slab_flags_t flags, void (*ctor)(void *))
+        {
+                struct kmem_cache *s;
+
+                s = find_mergeable(size, align, flags, name, ctor);
+                if (s) {
+                        s->refcount++;
+        [...]
+                        if (sysfs_slab_alias(s, name)) {
+                                s->refcount--;
+                                s = NULL;
+                        }
+                }
+
+                return s;
+
+        mm/slab_common.c:
+
+                if (s)
+                        // Clean up and return merged slab cache
+                        goto out_unlock;
+        ```
+
+1. If the new slab could not be merged, grab a new `kmem_cache` object, perform setup of the slab cache metadata
+
+    - `mm/slab_common.c`: `kmem_cache_create_usercopy` &#8594; `create_cache`
+
+        ```c
+                // This fails, so create a new slab cache
+                if (!usersize)
+                        s = __kmem_cache_alias(name, size, align, flags, ctor);
+                if (s)
+                        goto out_unlock;
+                [...]
+                s = create_cache(cache_name, size,
+                                 calculate_alignment(flags, align, size),
+                                 flags, useroffset, usersize, ctor, NULL);
+        [...]
+        static struct kmem_cache *create_cache(const char *name,
+                        unsigned int object_size, unsigned int align,
+                        slab_flags_t flags, unsigned int useroffset,
+                        unsigned int usersize, void (*ctor)(void *),
+                        struct kmem_cache *root_cache)
+        {
+                struct kmem_cache *s;
+                int err; 
+        [...]
+                s = kmem_cache_zalloc(kmem_cache, GFP_KERNEL);
+                if (!s) 
+                        goto out; 
+
+                s->name = name;
+                s->size = s->object_size = object_size;
+                s->align = align;
+                s->ctor = ctor;
+                s->useroffset = useroffset;
+                s->usersize = usersize;
+        ```
+
+2. Once the slab cache metadata is setup, walk the NUMA nodes creating a slab cache on each node, then walk the CPUs and create per-cpu slab bits.
+
+    - `mm/slab_common.c`: `create_cache` &#8594; `mm/slub.c`: `__kmem_cache_create` &#8594; `kmem_cache_open` &#8594; `init_kmem_cache_nodes` &#8594; `kmem_cache_open` &#8594; `alloc_kmem_cache_cpus`
+
+        ```c
+        mm/slab_common.c:
+
+        [...]
+                s->useroffset = useroffset;
+                s->usersize = usersize;
+
+                err = __kmem_cache_create(s, flags);  ---.
+                                                         |
+        mm/slub.c:                                       |
+                                                         v
+            int __kmem_cache_create(struct kmem_cache *s, slab_flags_t flags)
+            {
+                    int err;
+
+                    err = kmem_cache_open(s, flags);  ---.
+                                                         v
+                static int kmem_cache_open(struct kmem_cache *s, slab_flags_t flags)
+                {
+                [...]
+                        if (!init_kmem_cache_nodes(s))
+
+                    static int init_kmem_cache_nodes(struct kmem_cache *s)
+                    {
+                            int node;
+
+                            for_each_node_state(node, N_NORMAL_MEMORY) {
+                                    struct kmem_cache_node *n;
+                    [...]
+                                    n = kmem_cache_alloc_node(kmem_cache_node,
+                                                                    GFP_KERNEL, node);
+                    [...]
+                                    init_kmem_cache_node(n);
+                                    s->node[node] = n;
+                            }
+                            return 1;
+                    }
+
+                        // back in kmem_cache_open
+                                goto error;
+
+                        if (alloc_kmem_cache_cpus(s))  ---.
+                                                          v
+                    static inline int alloc_kmem_cache_cpus(struct kmem_cache *s)
+                    {
+                    [...]
+                            s->cpu_slab = __alloc_percpu(sizeof(struct kmem_cache_cpu),
+                                                         2 * sizeof(void *));
+
+                            if (!s->cpu_slab)
+                                    return 0;
+
+                            init_kmem_cache_cpus(s);
+
+                            return 1;
+                    }
+        ```
+
 #### Allocating from a slab (`kmem_cache_alloc`)
+
+0. Allocating from `kmem_cache_alloc` is done similar to how an application would call `malloc`; `kmem_cache_alloc` will attempt to "allocate" an object in slab caches and provide a pointer on return to that new space "allocated". 
+
+    - The difference here is `malloc` gets a size (such as 100 bytes), whereas `kmem_cache_alloc` takes a pointer to a named slab cache to pull allocations from and a GFP flag to indicate how the allocation should occur:
+
+        ```c
+        struct pid *alloc_pid(struct pid_namespace *ns)
+        {
+                struct pid *pid;
+        [...]
+                // Below, ns->pid_cachep is the slab cache for pids relegated under a namespace
+                pid = kmem_cache_alloc(ns->pid_cachep, GFP_KERNEL);
+        ```
+
+    - Likewise, variations exist to indicate how and where to allocation from; `kmem_cache_alloc_node` tries to allocate from the current NUMA node rather than from possible any NUMA node
 
 1. First grab the current CPU's `kmem_cache_cpu` structure and check if we have space to allocate from it (IE the freelist pointer points to something). Allocate from that freelist pointer and update the pointer head as needed. 
 
     - This is referred to as the "fast path" 
-    - `mm/slub.c`: `kmem_cache_alloc` (and the numa node specific version, `kmem_cache_alloc_node`) -> `slab_alloc_node`
+    - `mm/slub.c`: `kmem_cache_alloc` (and the numa node specific version, `kmem_cache_alloc_node`) &#8594; `slab_alloc_node`
 
         ```c
                 do { 
@@ -163,7 +336,7 @@
 
 2. If we can not, go the "slow path"; if we have jumped around CPUs during this process (IE the CPU we started on isn't the CPU we are currently executing on), try again from 1.; load the per-cpu `kmem_cache_cpu` for our new CPU and see if we have space to allocate from it. If not, continue.
   
-    - `mm/slub.c`: `slab_alloc_node` -> `__slab_alloc` -> `___slab_alloc`
+    - `mm/slub.c`: `slab_alloc_node` &#8594; `__slab_alloc` &#8594; `___slab_alloc`
   
         ```c
         __slab_alloc()
@@ -232,7 +405,7 @@
 
 5. Try and grab the per-numa node's, `kmem_cache_node` for the current node and check if it has any slabs on its `partial` lists. If so, grab the next partial slab for that numa node and throw it into the current cpu's `kmem_cache_node` main `page` and return the next `freelist` pointer. Otherwise, continue.
   
-    - `mm/slub.c`: `___slab_alloc` -> `new_slab_objects`
+    - `mm/slub.c`: `___slab_alloc` &#8594; `new_slab_objects`
 
         ```c
         ___slab_alloc()
@@ -256,7 +429,7 @@
 
 6. At this point, the current CPU didn't have any free objects on its main page and backup `partial` page, and the current CPU's numa node also has no partial pages, so allocate a new slab! Put the `kmem_cache_cpu` slab onto the numa node's full list (within `deactivate_slab`), allocate memory for the slab, setup the slab and its `freelist`, and set the new slab to the `kmem_cache_cpu`'s backup `page` pointer. Return the new `freelist`.
   
-    - `mm/slub.c`: `___slab_alloc` -> `deactivate_slab` -> `___slab_alloc`
+    - `mm/slub.c`: `___slab_alloc` &#8594; `deactivate_slab` &#8594; `___slab_alloc`
 
         ```c
         ___slab_alloc()
