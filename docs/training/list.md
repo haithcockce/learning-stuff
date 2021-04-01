@@ -1,5 +1,7 @@
 # Lists
 
+## Overview
+
 - The kernel uses circular, doubley-linked lists 
 - Multiple iterating functions and structures exist. 
 - The most common is the `list_head` structure made of `prev` and `next` pointers only
