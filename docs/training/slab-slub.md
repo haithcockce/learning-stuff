@@ -141,159 +141,165 @@
 #### Allocating from a slab (`kmem_cache_alloc`)
 
 1. First grab the current CPU's `kmem_cache_cpu` structure and check if we have space to allocate from it (IE the freelist pointer points to something). Allocate from that freelist pointer and update the pointer head as needed. 
-  - This is referred to as the "fast path" 
-  - `mm/slub.c`: `kmem_cache_alloc` (and the numa node specific version, `kmem_cache_alloc_node`) -> `slab_alloc_node`
 
-    ```c
-            do { 
-                tid = this_cpu_read(s->cpu_slab->tid);
-                c = raw_cpu_ptr(s->cpu_slab);
-            } while (IS_ENABLED(CONFIG_PREEMPT) &&
-                     unlikely(tid != READ_ONCE(c->tid)));
-    [...]
-            object = c->freelist;
-            page = c->page;
-            if (unlikely(!object || !page || !node_match(page, node))) {
-                    object = __slab_alloc(s, gfpflags, node, addr, c);  // Enter slow path here
-                    stat(s, ALLOC_SLOWPATH);
-            } else {
-                    void *next_object = get_freepointer_safe(s, object);
-    ```
+    - This is referred to as the "fast path" 
+    - `mm/slub.c`: `kmem_cache_alloc` (and the numa node specific version, `kmem_cache_alloc_node`) -> `slab_alloc_node`
+
+        ```c
+                do { 
+                    tid = this_cpu_read(s->cpu_slab->tid);
+                    c = raw_cpu_ptr(s->cpu_slab);
+                } while (IS_ENABLED(CONFIG_PREEMPT) &&
+                         unlikely(tid != READ_ONCE(c->tid)));
+        [...]
+                object = c->freelist;
+                page = c->page;
+                if (unlikely(!object || !page || !node_match(page, node))) {
+                        object = __slab_alloc(s, gfpflags, node, addr, c);  // Enter slow path here
+                        stat(s, ALLOC_SLOWPATH);
+                } else {
+                        void *next_object = get_freepointer_safe(s, object);
+        ```
 
 2. If we can not, go the "slow path"; if we have jumped around CPUs during this process (IE the CPU we started on isn't the CPU we are currently executing on), try again from 1.; load the per-cpu `kmem_cache_cpu` for our new CPU and see if we have space to allocate from it. If not, continue.
-  - `mm/slub.c`: `slab_alloc_node` -> `__slab_alloc` -> `___slab_alloc`
   
-    ```c
-    __slab_alloc()
-            c = this_cpu_ptr(s->cpu_slab);
-    [...]
-            p = ___slab_alloc(s, gfpflags, node, addr, c);
-    ___slab_alloc()
-            /* must check again c->freelist in case of cpu migration or IRQ */
-            freelist = c->freelist;
-            if (freelist)
-                    goto load_freelist;
-    [...]
+    - `mm/slub.c`: `slab_alloc_node` -> `__slab_alloc` -> `___slab_alloc`
+  
+        ```c
+        __slab_alloc()
+                c = this_cpu_ptr(s->cpu_slab);
+        [...]
+                p = ___slab_alloc(s, gfpflags, node, addr, c);
+        ___slab_alloc()
+                /* must check again c->freelist in case of cpu migration or IRQ */
+                freelist = c->freelist;
+                if (freelist)
+                        goto load_freelist;
+        [...]
+            load_freelist:
+                /*
+                 * freelist is pointing to the list of objects to be used.
+                 * page is pointing to the page from which the objects are obtained.
+                 * That page must be frozen for per cpu allocations to work.
+                 */
+                VM_BUG_ON(!c->page->frozen);
+                c->freelist = get_freepointer(s, freelist);
+                c->tid = next_tid(c->tid);
+                return freelist;
+        ```
+    
+3. If we don't have a free object, and thus no freelist pointer, then check to see if we have a free object on the slab page we originally had in `kmem_cache_cpu`. If so, grab the next free object from the freelist on that page, update the `kmem_cache_cpu` freelist pointer, and return. Otherwise continue.
+  
+    - `mm/slub.c`: `___slab_alloc`
+
+        ```c
+        ___slab_alloc()
+
+                freelist = get_freelist(s, page);
+        [...]
         load_freelist:
-            /*
-             * freelist is pointing to the list of objects to be used.
-             * page is pointing to the page from which the objects are obtained.
-             * That page must be frozen for per cpu allocations to work.
-             */
-            VM_BUG_ON(!c->page->frozen);
-            c->freelist = get_freepointer(s, freelist);
-            c->tid = next_tid(c->tid);
-            return freelist;
-    ```
-    
-4. If we don't have a free object, and thus no freelist pointer, then check to see if we have a free object on the slab page we originally had in `kmem_cache_cpu`. If so, grab the next free object from the freelist on that page, update the `kmem_cache_cpu` freelist pointer, and return. Otherwise continue.
-  - `mm/slub.c`: `___slab_alloc`
+                /*
+                 * freelist is pointing to the list of objects to be used.
+                 * page is pointing to the page from which the objects are obtained.
+                 * That page must be frozen for per cpu allocations to work.
+                 */
+                VM_BUG_ON(!c->page->frozen);
+                c->freelist = get_freepointer(s, freelist);
+                c->tid = next_tid(c->tid);
+                return freelist;
+        ```
 
-    ```c
-    ___slab_alloc()
-    
-            freelist = get_freelist(s, page);
-    [...]
-    load_freelist:
-            /*
-             * freelist is pointing to the list of objects to be used.
-             * page is pointing to the page from which the objects are obtained.
-             * That page must be frozen for per cpu allocations to work.
-             */
-            VM_BUG_ON(!c->page->frozen);
-            c->freelist = get_freepointer(s, freelist);
-            c->tid = next_tid(c->tid);
-            return freelist;
-    ```
+4. If we have a `partial` list, then set the backup `partial` pointer as the main `page` pointer and reattempt allocating from step 3. Otherwise continue.
+  
+    - `mm/slub.c`: `___slab_alloc`
 
-6. If we have a `partial` list, then set the backup `partial` pointer as the main `page` pointer and reattempt allocating from step 3. Otherwise continue.
-  - `mm/slub.c`: `___slab_alloc`
+        ```c
+                if (!freelist) {
+                        c->page = NULL;
+                        stat(s, DEACTIVATE_BYPASS);
+                        goto new_slab;
+                }
+        [...]
+        new_slab:
 
-    ```c
-            if (!freelist) {
-                    c->page = NULL;
-                    stat(s, DEACTIVATE_BYPASS);
-                    goto new_slab;
-            }
-    [...]
-    new_slab:
+                if (slub_percpu_partial(c)) {
+                        page = c->page = slub_percpu_partial(c);
+                        slub_set_percpu_partial(c, page);
+                        stat(s, CPU_PARTIAL_ALLOC);
+                        goto redo;
+                }
+        ```
 
-            if (slub_percpu_partial(c)) {
-                    page = c->page = slub_percpu_partial(c);
-                    slub_set_percpu_partial(c, page);
-                    stat(s, CPU_PARTIAL_ALLOC);
-                    goto redo;
-            }
-    ```
+5. Try and grab the per-numa node's, `kmem_cache_node` for the current node and check if it has any slabs on its `partial` lists. If so, grab the next partial slab for that numa node and throw it into the current cpu's `kmem_cache_node` main `page` and return the next `freelist` pointer. Otherwise, continue.
+  
+    - `mm/slub.c`: `___slab_alloc` -> `new_slab_objects`
 
-8. Try and grab the per-numa node's, `kmem_cache_node` for the current node and check if it has any slabs on its `partial` lists. If so, grab the next partial slab for that numa node and throw it into the current cpu's `kmem_cache_node` main `page` and return the next `freelist` pointer. Otherwise, continue.
-  - `mm/slub.c`: `___slab_alloc` -> `new_slab_objects`
+        ```c
+        ___slab_alloc()
 
-    ```c
-    ___slab_alloc()
-    
-            freelist = new_slab_objects(s, gfpflags, node, &c);
+                freelist = new_slab_objects(s, gfpflags, node, &c);
 
-    new_slab_objects()
+        new_slab_objects()
 
-            freelist = get_partial(s, flags, node, c);
+                freelist = get_partial(s, flags, node, c);
 
-            if (freelist)
-                    return freelist;
-    
-    ___slab_alloc()
-    
-            page = c->page;
-            if (likely(!kmem_cache_debug(s) && pfmemalloc_match(page, gfpflags)))
-                    goto load_freelist;  // refer to steps 3. or 4. for the load_freelist code path
+                if (freelist)
+                        return freelist;
 
-    ```
+        ___slab_alloc()
 
-10. At this point, the current CPU didn't have any free objects on its main page and backup `partial` page, and the current CPU's numa node also has no partial pages, so allocate a new slab! Put the `kmem_cache_cpu` slab onto the numa node's full list (within `deactivate_slab`), allocate memory for the slab, setup the slab and its `freelist`, and set the new slab to the `kmem_cache_cpu`'s backup `page` pointer. Return the new `freelist`.
-  - `mm/slub.c`: `___slab_alloc` -> `deactivate_slab` -> `___slab_alloc`
+                page = c->page;
+                if (likely(!kmem_cache_debug(s) && pfmemalloc_match(page, gfpflags)))
+                        goto load_freelist;  // refer to steps 3. or 4. for the load_freelist code path
 
-    ```c
-    ___slab_alloc()
-    
-            freelist = new_slab_objects(s, gfpflags, node, &c);
+        ```
 
-    new_slab_objects()
+6. At this point, the current CPU didn't have any free objects on its main page and backup `partial` page, and the current CPU's numa node also has no partial pages, so allocate a new slab! Put the `kmem_cache_cpu` slab onto the numa node's full list (within `deactivate_slab`), allocate memory for the slab, setup the slab and its `freelist`, and set the new slab to the `kmem_cache_cpu`'s backup `page` pointer. Return the new `freelist`.
+  
+    - `mm/slub.c`: `___slab_alloc` -> `deactivate_slab` -> `___slab_alloc`
 
-            freelist = get_partial(s, flags, node, c);
+        ```c
+        ___slab_alloc()
 
-            if (freelist)
-                    return freelist;
-    
-            page = new_slab(s, flags, node);
-            if (page) {
-                    c = raw_cpu_ptr(s->cpu_slab);
-                    if (c->page)
-                            flush_slab(s, c);
+                freelist = new_slab_objects(s, gfpflags, node, &c);
 
-                    /*
-                     * No other reference to the page yet so we can
-                     * muck around with it freely without cmpxchg
-                     */
-                    freelist = page->freelist;
-                    page->freelist = NULL;
+        new_slab_objects()
 
-                    stat(s, ALLOC_SLAB);
-                    c->page = page;
-                    *pc = c;
-            }
+                freelist = get_partial(s, flags, node, c);
 
-            return freelist;
+                if (freelist)
+                        return freelist;
 
-    ___slab_alloc()
-    
-            freelist = new_slab_objects(s, gfpflags, node, &c);
+                page = new_slab(s, flags, node);
+                if (page) {
+                        c = raw_cpu_ptr(s->cpu_slab);
+                        if (c->page)
+                                flush_slab(s, c);
 
-    [...]
-    
-            page = c->page;
-            if (likely(!kmem_cache_debug(s) && pfmemalloc_match(page, gfpflags)))
-                    goto load_freelist;  // refer to steps 3. or 4. for the load_freelist code path
-    ```
+                        /*
+                         * No other reference to the page yet so we can
+                         * muck around with it freely without cmpxchg
+                         */
+                        freelist = page->freelist;
+                        page->freelist = NULL;
+
+                        stat(s, ALLOC_SLAB);
+                        c->page = page;
+                        *pc = c;
+                }
+
+                return freelist;
+
+        ___slab_alloc()
+
+                freelist = new_slab_objects(s, gfpflags, node, &c);
+
+        [...]
+
+                page = c->page;
+                if (likely(!kmem_cache_debug(s) && pfmemalloc_match(page, gfpflags)))
+                        goto load_freelist;  // refer to steps 3. or 4. for the load_freelist code path
+        ```
 
 
 allocating slab:
