@@ -111,18 +111,15 @@
   - **_Use with caution_** It can overwhelm a system printing backtraces
   - You may need to expand the kernel ring buffer size as 
 
-
-# The rest of this is under construction
-
 ## Deeper Slab Management Overview
 
 - "Free" objects are organized as a "linked list" 
 
-    - A "free" object will actually contain a pointer to the next "free" object located on the same slab. <img align="right" src="https://static.lwn.net/images/ns/kernel/slub-freelist.png">
+    - A "free" object will actually contain a pointer to the next "free" object located on the same slab. <img align="right" src="https://static.lwn.net/images/ns/kernel/slub-freelist.png" width="100px">
     - Allocating from the "list" adjusts the linked list "head pointer" (`void* freelist`) to the next free object
     - Freeing from the list simply overwrites the object with a pointer to the original next free object and updates the freelist pointer
 
-- SLUB has a good amount of debugging and sanity checking features built in (some are enabled and others are not). A SLUB object, for example, contains many things beyond just the cached object: <img align="right" src="https://github.com/haithcockce/learning-stuff/blob/master/docs/training/slub-object-layout.png?raw=true">
+- SLUB has a good amount of debugging and sanity checking features built in (some are enabled and others are not). A SLUB object, for example, contains many things beyond just the cached object: <img align="right" src="https://github.com/haithcockce/learning-stuff/blob/master/docs/training/media/slub-object-layout.png?raw=true" width="500px">
 
     - When an object is actually caching something, the _redzone_ behind the cached object (_payload_ in the picture) can detect if something wrote beyond the size of the object. If the redzone value does not match the `RED_ACTIVE` "magic number", then the object or slub page is corrupted potentially
     - When an object is not in use (and thus free to use by someone), the object area is filled with the freelist pointer and a poison value. If the object is used by someone but the object is just the poison value, then someone else freed the object from under us.
@@ -131,12 +128,21 @@
 
     - `*cpu_slab` the offset from the per-cpu base address for the per-cpu `kmem_cache_cpu` struct discussed later on,
     - `offset` a slub object contains a fair bit of additional "stuff" to account for cacheline things as well as debugging purposes. Behind the cached object area is some padding and then the pointer to the next free object. For the "linked list" noted above, this is the `next` pointer typically seen in linked list structures.
+    - `min_partial` a lower bound on the count of partial slabs to keep around in NUMA nodes
+    - `kmem_cache_order_objects {max,min}` upper and lower limits of the sizes of the objects in the slub objects and the upper and lower limits on the order of the pages backing the slabs
+    - `inuse` the start of the metadata of the slub object. In some instances, `inuse` will point to the `freepointer` which resides past the cached object spot, various tracking data bits, and padding, wherein `offset` and `inuse` will likely match. In others, the `freepointer` is set where the cached object was so `offset` and `inuse` will not match.
+    - `list` the entry point for the list of slab caches
+    - `node[MAX_NUMANODES]` list of per NUMA node `kmem_cache_nodes`. **Note** in a vmcore, the list will always be `MAX_NUMANODES` in size (1024 at the time of writing) but will potentially be filled with garbage in the areas of the list where there is no possible NUMA node (IE for a 2 node system, a slab cache's `node` list will have 1024 spots but only `node[0]` and `node[1]` will have valid pointers).
+
 - Each slab cache has both a local, per-cpu bit of slab cache info and a per-numa node bit of slab cache info
-  - For optimizations, the per-cpu slab cache, `kmem_cache_cpu` contains a small subset of the slabs for the slab cache
+- For optimizations, the per-cpu slab cache, `kmem_cache_cpu` contains a small subset of the slabs for the slab cache
+ 
     - `freelist` points to the first free object on a page of slab
     - `page` points to the slab page `freelist` resides in. This will be the first page checked when allocating locally.
     - `partial` points to a slab page that has some objects allocated and others freed. Sometimes is the same pointer as `page` and sometimes not. This will be the backup page to check if `page` doesn't have any free objects.
-  - The per-numa node slab cache bits, `kmem_cache_node` allows synchronous access to objects shared across them but is slower
+
+- The per-numa node slab cache bits, `kmem_cache_node` allows synchronous access to objects shared across them but is slower
+
     - `list_lock` prevents concurrent updates to its lists of slabs
     - `nr_partial` a count of the amount of partial slabs it has for that slab cache
     - `struct list_head partial` the list of partial slab pages
@@ -146,7 +152,7 @@
 
 ### Logicflows for Interacting With Slab
 
-#### Creating a slab cache
+#### Creating a slab cache (`kmem_cache_create`)
 
 0. Do various sanity checks and then try to merge the newly requested slab cache into an existing slab cache.
 
@@ -473,6 +479,38 @@
                 if (likely(!kmem_cache_debug(s) && pfmemalloc_match(page, gfpflags)))
                         goto load_freelist;  // refer to steps 3. or 4. for the load_freelist code path
         ```
+
+# The rest of this is under construction
+
+#### Freeing a slub object (`kmem_cache_free`)
+
+0. First, grab the `kmem_cache` the object is in checking against the passed in `kmem_cachee` to ensure it matches. 
+
+    - `mm/slub.c`: `kmem_cache_free` &#8594; `mm/slab.h`: `cache_from_obj`
+
+        ```c
+        void kmem_cache_free(struct kmem_cache *s, void *x)
+        {
+                s = cache_from_obj(s, x);     ---.
+                if (!s)                          |
+                        return;                  |
+                                                 |
+        mm/slab.h:                               |
+                                                 v
+            static inline struct kmem_cache *cache_from_obj(struct kmem_cache *s, void *x) 
+            {
+                    struct kmem_cache *cachep;
+            [...]
+                    cachep = virt_to_cache(x);
+                    if (WARN(cachep && cachep != s,
+                              "%s: Wrong slab cache. %s but object is from %s\n",
+                              __func__, s->name, cachep->name))
+                            print_tracking(cachep, x); 
+                    return cachep;
+            }
+        ```
+
+1. Similar to 
 
 
 allocating slab:
