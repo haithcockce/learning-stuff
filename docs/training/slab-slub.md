@@ -510,7 +510,63 @@
             }
         ```
 
-1. Similar to 
+1. Similar to `kmem_cache_alloc`, we check the local CPU's `kmem_cache_cpu` first and free from there if we can.
+
+    - This is the "fast path" if we have the slab cache on hand we need to free from 
+    - To determine if the slab we are attempting to free from is on the per-CPU slab cache, grab the first page of the slab we reside on (a).
+    - When checking the current CPU's `kmem_cache_cpu`, keep checking in the event we get moved to other CPUs while reading `kmem_cache_cpu`.
+    - From there, if it's the same slab, update the `freelist` pointer on the per-CPU slab cache to the `freelist` pointer embedded in the slab object we want to free (no actual "freeing" here, just updating pointers).
+    - `mm/slub.c`: `kmem_cache_free` &#8594; `slab_free` &#8594; `do_slab_free`
+
+        ```c
+        void kmem_cache_free(struct kmem_cache *s, void *x)
+        [...]
+                if (!s) 
+                        return;
+                slab_free(s, virt_to_head_page(x), x, NULL, 1, _RET_IP_);  // (a) virt_to_head_page(x) grabs the page pointer for the 
+                    '------------------.                                   // page "x" points somewhere into 
+                                       v
+        static __always_inline void slab_free(struct kmem_cache *s, struct page *page,
+                                              void *head, void *tail, int cnt,
+                                              unsigned long addr)
+        [...]
+                if (slab_free_freelist_hook(s, &head, &tail))
+                        do_slab_free(s, page, head, tail, cnt, addr);
+                             '----------.
+                                        v
+        static __always_inline void do_slab_free(struct kmem_cache *s,
+                                        struct page *page, void *head, void *tail,
+                                        int cnt, unsigned long addr)
+        {
+        [...]
+                /*
+                 * Determine the currently cpus per cpu slab.
+                 * The cpu may change afterward. However that does not matter since
+                 * data is retrieved via this pointer. If we are on the same cpu
+                 * during the cmpxchg then the free will succeed.
+                 */
+                do {    // Read this CPU's kmem_cache_cpu
+                        tid = this_cpu_read(s->cpu_slab->tid);
+                        c = raw_cpu_ptr(s->cpu_slab);
+                } while (IS_ENABLED(CONFIG_PREEMPT) &&
+                         unlikely(tid != READ_ONCE(c->tid)));  // check to see if we were moved around
+        [...]
+                // if indeed our object is on this per-CPU slab cache...
+                if (likely(page == c->page)) {
+                        void **freelist = READ_ONCE(c->freelist);
+
+                        // grab the freelist pointer for this CPU from the object we are "freeing"
+                        set_freepointer(s, tail_obj, freelist);
+
+                        // update this kmem_cache_cpu's freelist pointer
+                        if (unlikely(!this_cpu_cmpxchg_double(
+                                        s->cpu_slab->freelist, s->cpu_slab->tid,
+                                        freelist, tid,
+                                        head, next_tid(tid)))) {
+        [...]  // end of function if this succeeds
+        ```
+
+2. If this fails, slow path
 
 
 allocating slab:
