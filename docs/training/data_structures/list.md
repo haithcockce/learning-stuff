@@ -294,3 +294,10 @@
     comm = "kworker/u4:0\000\000\000"
     pid = 0x8
   ```
+
+## References
+
+- Kernel source 
+  - `include/linux/list.h`
+  - `include/linux/types.h`
+
