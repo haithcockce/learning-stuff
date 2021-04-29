@@ -480,8 +480,6 @@
                         goto load_freelist;  // refer to steps 3. or 4. for the load_freelist code path
         ```
 
-# The rest of this is under construction
-
 #### Freeing a slub object (`kmem_cache_free`)
 
 0. First, grab the `kmem_cache` the object is in checking against the passed in `kmem_cachee` to ensure it matches.
@@ -841,85 +839,85 @@ As noted in the overview for `kmem_cache_alloc`, some instances of slab interact
 
 If a slab cache is designated as reclaimable by the `kmem_cache_create` call, the caller can also register a designated way to free up slab objects in its slab cache, called a "shrinker". The kernel maintains a list of these shrinkers, `shrinker_list`, and when memory pressure occurs or when `echo 2 > drop_caches` occurs, the kernel iterates over this list and deploys the shrinker. The shrinker then walks its managed objects and calls its implemented "free" function.
 
-    ```c
-    void drop_slab(void)
-    {
-            int nid;
+```c
+void drop_slab(void)
+{
+        int nid;
 
-            for_each_online_node(nid)
-                    drop_slab_node(nid);
-    }
+        for_each_online_node(nid)
+                drop_slab_node(nid);
+}
 
-    void drop_slab_node(int nid)
-    {
-            unsigned long freed;
+void drop_slab_node(int nid)
+{
+        unsigned long freed;
 
-            do {
-                    struct mem_cgroup *memcg = NULL;
+        do {
+                struct mem_cgroup *memcg = NULL;
 
-                    freed = 0;
-                    memcg = mem_cgroup_iter(NULL, NULL, NULL);
-                    do {
-                            freed += shrink_slab(GFP_KERNEL, nid, memcg, 0);   -----------.
-                    } while ((memcg = mem_cgroup_iter(NULL, memcg, NULL)) != NULL);       |
-            } while (freed > 10);                                                         v
-    }
+                freed = 0;
+                memcg = mem_cgroup_iter(NULL, NULL, NULL);
+                do {
+                        freed += shrink_slab(GFP_KERNEL, nid, memcg, 0);   -----------.
+                } while ((memcg = mem_cgroup_iter(NULL, memcg, NULL)) != NULL);       |
+        } while (freed > 10);                                                         v
+}
 
+/*
+ * shrink_slab - shrink slab caches
+ * @gfp_mask: allocation context
+ * @nid: node whose slab caches to target
+ * @memcg: memory cgroup whose slab caches to target
+ * @priority: the reclaim priority
+ *
+ * Call the shrink functions to age shrinkable caches.
+ *
+ * @nid is passed along to shrinkers with SHRINKER_NUMA_AWARE set,
+ * unaware shrinkers will receive a node id of 0 instead.
+ *
+ * @memcg specifies the memory cgroup to target. Unaware shrinkers
+ * are called only if it is the root cgroup.
+ *
+ * @priority is sc->priority, we take the number of objects and >> by priority
+ * in order to get the scan target.
+ *
+ * Returns the number of reclaimed slab objects.
+ */
+static unsigned long shrink_slab(gfp_t gfp_mask, int nid,
+                                 struct mem_cgroup *memcg,
+                                 int priority)
+{
+        unsigned long ret, freed = 0;
+        struct shrinker *shrinker;
+[...]
+        list_for_each_entry(shrinker, &shrinker_list, list) {
+                struct shrink_control sc = {
+                        .gfp_mask = gfp_mask,
+                        .nid = nid,
+                        .memcg = memcg,
+                };
 
-     * shrink_slab - shrink slab caches
-     * @gfp_mask: allocation context
-     * @nid: node whose slab caches to target
-     * @memcg: memory cgroup whose slab caches to target
-     * @priority: the reclaim priority
-     *
-     * Call the shrink functions to age shrinkable caches.
-     *
-     * @nid is passed along to shrinkers with SHRINKER_NUMA_AWARE set,
-     * unaware shrinkers will receive a node id of 0 instead.
-     *
-     * @memcg specifies the memory cgroup to target. Unaware shrinkers
-     * are called only if it is the root cgroup.
-     *
-     * @priority is sc->priority, we take the number of objects and >> by priority
-     * in order to get the scan target.
-     *
-     * Returns the number of reclaimed slab objects.
-     */
-    static unsigned long shrink_slab(gfp_t gfp_mask, int nid,
-                                     struct mem_cgroup *memcg,
-                                     int priority)
-    {
-            unsigned long ret, freed = 0;
-            struct shrinker *shrinker;
-    [...]
-            list_for_each_entry(shrinker, &shrinker_list, list) {
-                    struct shrink_control sc = {
-                            .gfp_mask = gfp_mask,
-                            .nid = nid,
-                            .memcg = memcg,
-                    };
+                ret = do_shrink_slab(&sc, shrinker, priority);
+                if (ret == SHRINK_EMPTY)
+                        ret = 0;
+                freed += ret;
+                /*
+                 * Bail out if someone want to register a new shrinker to
+                 * prevent the regsitration from being stalled for long periods
+                 * by parallel ongoing shrinking.
+                 */
+                if (rwsem_is_contended(&shrinker_rwsem)) {
+                        freed = freed ? : 1;
+                        break;
+                }
+        }
 
-                    ret = do_shrink_slab(&sc, shrinker, priority);
-                    if (ret == SHRINK_EMPTY)
-                            ret = 0;
-                    freed += ret;
-                    /*
-                     * Bail out if someone want to register a new shrinker to
-                     * prevent the regsitration from being stalled for long periods
-                     * by parallel ongoing shrinking.
-                     */
-                    if (rwsem_is_contended(&shrinker_rwsem)) {
-                            freed = freed ? : 1;
-                            break;
-                    }
-            }
-
-            up_read(&shrinker_rwsem);
-    out:
-            cond_resched();
-            return freed;
-    }
-    ```
+        up_read(&shrinker_rwsem);
+out:
+        cond_resched();
+        return freed;
+}
+```
 
 ## References
 
