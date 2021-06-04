@@ -14,7 +14,36 @@
 - _Verbs_ the API to setup and manage interconnects or _channels_.
 - _HCA_ Host Channel Adapter, dedicated hardware which enables the RDMA protocol and operates like a Network Interface Card specialized for RDMA.
 
-### How does it work? 
+### Communication Overview
+
+#### Node-To-Node Communications
+
+- RDMA encapsulates actions perform some operation as a _Work Request_ (WR), where completion of this is referred to as a _completion_.
+- Work Requests are organized into queues generically referred to as _Work Queues_ (WQ);
+  - _Send Queues_ (SQ) are Work Queues responsible for sending data
+  - _Receive Queues_ (RQ) are Work Queues responsible for receiving data
+  - Send and Receive queues are created in pairs called _Queue Pairs_ (QP) to establish node-to-node communication
+- When a Work Request is queued to a Work Queue, the Work Request is first encapsulated into a _Work Queue Entity_ (WQE)
+  - Queueing a Work Queue Entity to either a Work Queue is referred to as _posting_
+  - Work Queue Entities are differentiated as _Send Request_ (SR) when queued to a Send Queue and _Receive Request_ (RR) when queued to a Receive Queue.
+- _Work Completions_ are entities of data containing info about the completion of some request.
+  - If a Work Completion is created from some action, it is queued to a _Completion Queue_ (CQ) as a _Completion Queue Entity_ (CQE)
+  - A Send Request may not end with a Completion Queue Entity
+  - A Receive Request always ends with a Completion Queue Entity
+
+<img align="center" src="https://github.com/haithcockce/learning-stuff/blob/master/docs/training/media/queue_pair.png?raw=true">
+
+- **Note** The above is raw RDMA with basic Infiniband networking. The number of variances on this is quite large and continues to grow as the technology expands.
+
+#### Application-To-Channel Adapter Communications
+
+- use uverbs to talk to kernel to setup command and data channels
+
+[Programmer Sought](https://www.programmersought.com/article/24218148942/)
+[use this for uverbs](https://www.csm.ornl.gov/workshops/openshmem2013/documents/presentations_and_tutorials/Tutorials/Verbs%20programming%20tutorial-final.pdf)
+[go over protection domains and memory regions](https://blog.zhaw.ch/icclab/infiniband-an-introduction-simple-ib-verbs-program-with-rdma-write/)
+
+### Workflow in Program
 
 1. Via the verbs, create an infiniband context 
   - The application must first _register the memory_ which denotes an area of memory within the application as dedicated to RDMA operations.
@@ -22,6 +51,11 @@
 2. Once the HCA is opened, the application establishes a connection.
   - 
 
+### Kernel Bits
+
+#### Modules
+
+- [Mellanox Linux User Manual](https://www.mellanox.com/related-docs/prod_software/Mellanox_OFED_Linux_User_Manual_v4_3.pdf)
 
 # References
 
@@ -33,3 +67,9 @@
 - [iWARP vs. RoCE](https://www.snia.org/sites/default/files/ESF/RoCE-vs.-iWARP-Final.pdf) and a [youtube](https://www.youtube.com/watch?v=nGTY14UptOA) version of the same thing.
 - [Kernel Implementation](https://www.kernel.org/doc/ols/2005/ols2005v2-pages-279-290.pdf) Dated, but relevant kernel implementation 
 - [Introduction to Programming Infiniband RDMA [sic]](https://insujang.github.io/2020-02-09/introduction-to-programming-infiniband/)
+[Programmer Sought](https://www.programmersought.com/article/24218148942/)
+43
+[use this for uverbs](https://www.csm.ornl.gov/workshops/openshmem2013/documents/presentations_and_tutorials/Tutorials/Verbs%20programming%20tutorial-final.pdf)
+44
+[go over protection domains and memory regions](https://blog.zhaw.ch/icclab/infiniband-an-introduction-simple-ib-verbs-program-with-rdma-write/)
+45
