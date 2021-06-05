@@ -17,8 +17,13 @@
   - Verbs are divided logically into "control path" (manage RDMA/IB resources) and "data path" (using RDMA/IB resources to send/receive data)
   - At a high level, via the verbs interface, we use the control path/command channel to setup and create our Infiniband resources (such as the noted queues) and use the data path/data channels to send and receive data.
 
+- As implied above, Infiniband and RDMA provide a whole new networking stack which can be very specifically tailored to particular HPC setups. As such, the internal bits of Infiniband can be divided somewhat into three somewhat distinct layers:
+  - _Upper Layer Protocols_ (ULP) are application stack-specific protocols and libraries. For example, networked filesystems or networked storage solutions built on top of RDMA/IB would have libraries and operations at this layer.
+  - _Mid-Layer_ or functionality largely arbitrated and initialized by the OS in question to manage the underlying RDMA/IB operations and IB network fabric.
+  - Hardware-specific drivers
+
 - _HCA_ Host Channel Adapter, dedicated hardware which enables the RDMA protocol and operates like a Network Interface Card specialized for RDMA. Often referred to as just Channel Adapter (CA).
-- Below is a heavily abstracted diagram detailing some of the above info 
+- Below is a heavily abstracted diagram detailing some of the above info
 
 <img align="center" src="https://raw.githubusercontent.com/haithcockce/learning-stuff/master/docs/training/media/tcp-vs-rdma.jpg">
 
