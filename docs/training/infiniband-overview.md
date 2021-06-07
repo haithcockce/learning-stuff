@@ -1,6 +1,6 @@
 # Intro to Infiniband and RDMA
 
-### What?
+## What?
 
 - _Remote Direct Memory Access_ (or RDMA) is a transport protocol between two or more systems with a focus on High Performance Computing (HPC) environments. In its most basic setup, RDMA offers:
   - Kernel bypass; sending and receiving of data is done similar to simply reading from some area of memory (with a couple more moving parts to facilitate such) exposed directly to the application in question and thus does not require entering kernelspace to perform these operations
@@ -25,16 +25,16 @@
 - _HCA_ Host Channel Adapter, dedicated hardware which enables the RDMA protocol and operates like a Network Interface Card specialized for RDMA. Often referred to as just Channel Adapter (CA).
 - Below is a heavily abstracted diagram detailing some of the above info
 
-<img align="center" src="https://raw.githubusercontent.com/haithcockce/learning-stuff/master/docs/training/media/tcp-vs-rdma.jpg">
+<img align="center" src="https://raw.githubusercontent.com/haithcockce/learning-stuff/master/docs/training/media/tcp-vs-rdma.jpg" style="max-width:100%;">
 
 
 - **Note** Be prepared for a _lot_ of initialisms. The userspace and kernelspace implementations of RDMA/IB use the initialisms within their code extensively, so knowing the initialisms helps in reading the code.
 
-### Communication Overview
+## Communication Overview
 
-#### Node-To-Node Communications
+### Node-To-Node Communications
 
-- RDMA encapsulates actions to perform some operation as a _Work Request_ (WR), where completion of this is referred to as a _completion_.
+- RDMA encapsulates actions to perform some operation (such as sending or receiving data) as a _Work Request_ (WR), where completion of this is referred to as a _completion_.
 - Work Requests are organized into queues generically referred to as _Work Queues_ (WQ);
   - _Send Queues_ (SQ) are Work Queues responsible for sending data
   - _Receive Queues_ (RQ) are Work Queues responsible for receiving data
@@ -42,6 +42,10 @@
 - When a Work Request is queued to a Work Queue, the Work Request is first encapsulated into a _Work Queue Entity_ (WQE)
   - Queueing a Work Queue Entity to either Work Queue is referred to as _posting_
   - Work Queue Entities are differentiated as _Send Request_ (SR) when posted to a Send Queue and _Receive Request_ (RR) when posted to a Receive Queue
+- _Shared Receive Queues_ (SRQ) provides a scalable method of receiving work
+  - Posting Receive Requests is an atomic operation. For heavy ingress traffic, this atomic operation introduces an immediate bottleneck for addressing bursts of ingress activity.
+  - A Shared Receive Queue maps to 1 or more Queue Pairs (and thus 1 or more Receive Queues)
+  - A linked list of Receive Requests can be posted as a single atomic operation to a Shared Receive Queue for multiple Receive Requests to allow for scalability
 - _Work Completions_ are entities of data containing info about the completion of some request
   - As noted above, upon completion of posting some Work Request, a Work Completion may be generated
   - If a Work Completion is created from some action, it is queued to a _Completion Queue_ (CQ) as a _Completion Queue Entity_ (CQE)
@@ -49,12 +53,12 @@
   - A Receive Request always ends with a Completion Queue Entity
 - During setup of IB structures, a _Local Key_ (L_key) and _Remote Key_ (R_key) are generated for security in accessing memory regions (more on all this in "Application-To-Channel Adapter Communication")
 
-<img align="center" src="https://github.com/haithcockce/learning-stuff/blob/master/docs/training/media/queue_pair.png?raw=true">
+<img align="center" src="https://github.com/haithcockce/learning-stuff/blob/master/docs/training/media/queue_pair.png?raw=true" style="max-width:100%;">
 
 - **Note** The above is raw RDMA with basic Infiniband networking. The number of variances on this is quite large and continues to grow as the technology expands.
 
 
-#### Application-To-Channel Adapter Communications
+### Application-To-Channel Adapter Communications
 
 As noted earlier, RDMA allows direct communication with hardware from userspace. Several entities exist to facilitate direct hardware communication.
 
@@ -77,7 +81,30 @@ As noted earlier, RDMA allows direct communication with hardware from userspace.
   - Once created, the completion queues and queue pairs need to be assigned to each other and initialized.
 - _Reminder_ The setup actions are performed via the verbs. For most implementations, this is all provided from the `libibverbs` package.
 
-### Hardware
+## Hardware
+
+Infiniband hardware is largely developed by Mellanox (recently acquired by NVIDIA) and Intel (though Intel recently handed it to Cornelis Networks). At the time of writing, no other IB hardware providers exist. 
+
+### Mellanox
+
+#### Hardware Details
+
+- Mellanox cards are often described in terms of link width and link throughput when not described by theoretical max throughput. (https://www.hpcadvisorycouncil.com/pdf/Intro_to_InfiniBand.pdf)
+- Link width
+  - Links have one or more pairs of send/receive lanes (one send and one receive totalling to a single pair)
+  - 1x means one pair, 4x is 4 pairs, 12x is 12 pairs and so on
+- Link throughput
+  - _Single Data Rate_ (SDR) is 2.5 Gb/s per lane (4x SDR is thus 10 Gb/s)
+  - _Double Data Rate_ (DDR) is 5 Gb/s
+  - _Quad Data Rate_ (QDR) is 10 Gb/s
+  - _Fourteen Data Rate_ (FDR) is 14 Gb/s
+  - _Enhanced Data Rate_ (EDR) is 25 Gb/s
+  - Link throughput can be ascertained from `lspci`
+- Additional throughputs and widths may exist 
+- Mellanox releases various series of IB HCAs named "ConnectX"
+
+<img align="center" src="https://raw.githubusercontent.com/haithcockce/learning-stuff/master/docs/training/media/mellanox-adapters.png" style="max-width:100%;">
+
 
 ### Kernel Modules
 
