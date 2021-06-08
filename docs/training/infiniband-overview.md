@@ -11,6 +11,7 @@
 - _Infiniband_ (IB) is the network fabric and link-layer flow control
   - As RDMA requires very tight deadlines with massive throughput and still be lossless, typical networking fabrics will not be able to handle RDMA (by itself).
   - IB operates as the L2 or link layer between nodes and any additional infrastructure between RDMA applications (such as the physical network fabric adapters and whatnot)
+  - In nearly every scenario, IB fabric adapters can work as IB devices or Ethernet devices for interoperability.
 
 - _Verbs_ also referred to as _uverbs_ is an interface for application stacks to use in order to facilitate RDMA and Inifniband communications and setup _channels_
   - Conceptually similar to an API, but multiple implementations exist in the world.
@@ -105,10 +106,22 @@ Infiniband hardware is largely developed by Mellanox (recently acquired by NVIDI
 
 <img align="center" src="https://raw.githubusercontent.com/haithcockce/learning-stuff/master/docs/training/media/mellanox-adapters.png" style="max-width:100%;">
 
+- Mellanox HCAs have one or more ports 
 
 ### Kernel Modules
 
-So many modules exist.
+As noted above, the software for interacting with IB fabric falls roughly into three categories, device drivers, mid layer, and ULPs. 
+
+#### Device Drivers
+
+- `mlx4` main low-level drivers for ConnectX-3 family of cards. Functionality is split into the following modules;
+  - `mlx4_core` low-level hardware and firmware functionality such as device initialization, firmware command processing, and resource allocation to enable IB and Ethernet interoperability 
+  - `mlx4_ib` IB-specific functionality of device and connects IB-specific parts of mid-layer to IB functionality of hardware
+  - `mlx4_en` Ethernet-specific functionality of the card and connects TCP/IP networking mid-layer to ethernet functionality of hardware
+- `mlx5` main low-level drivers for ConnectX-4 family of cards and above. Functionality is split into the following modules:
+  - `mlx5_core` Low-level hardware and firmware functionality as well as some extended functionality specific to the hardware and firmware (such as initialization after a device reset). Also implements Ethernet functionality, meaning no mlx5 version of mlx4_en.
+  - `mlx5_ib` 
+- `mlxfw` Main module enabling flashing firmware on mellanox CAs
 
 ### Workflow in Program
 
