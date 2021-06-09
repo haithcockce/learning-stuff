@@ -13,8 +13,9 @@
   - IB operates as the L2 or link layer between nodes and any additional infrastructure between RDMA applications (such as the physical network fabric adapters and whatnot)
   - In nearly every scenario, IB fabric adapters can work as IB devices or Ethernet devices for interoperability.
 
-- _Verbs_ also referred to as _uverbs_ is an interface for application stacks to use in order to facilitate RDMA and Inifniband communications and setup _channels_
+- _Verbs_  an interface for application stacks to use in order to facilitate RDMA and Inifniband communications and setup _channels_
   - Conceptually similar to an API, but multiple implementations exist in the world.
+  - The userspace portions/interfaces are often referred to as _uverbs_ 
   - Verbs are divided logically into "control path" (manage RDMA/IB resources) and "data path" (using RDMA/IB resources to send/receive data)
   - At a high level, via the verbs interface, we use the control path/command channel to setup and create our Infiniband resources (such as the noted queues) and use the data path/data channels to send and receive data.
 
@@ -23,11 +24,20 @@
   - _Mid-Layer_ or functionality largely arbitrated and initialized by the OS in question to manage the underlying RDMA/IB operations and IB network fabric.
   - Hardware-specific drivers
 
-- _HCA_ Host Channel Adapter, dedicated hardware which enables the RDMA protocol and operates like a Network Interface Card specialized for RDMA. Often referred to as just Channel Adapter (CA).
+- _Host Channel Adapter_ (HCA), dedicated hardware which enables the RDMA protocol and operates like a Network Interface Card specialized for RDMA. Often referred to as just Channel Adapter (CA).
+
+- _Subnet Manager_ (SM) main software to manage a network of IB nodes (like a router on a regular TCP/IP network)
+  - Can run on a dedicated IB switch or simply on a system in the network. 
+    - This implies a dedicated IB hardware switch is not necessary to run in an IB network but is often found in larger HPC clusters. 
+    - When running on generic hardware, usually runs via `opensm`. 
+  - An SM discovers and configures all the IB fabric devices to enable traffic flow between those devices.
+  - An SM applies network traffic related configurations such as Quality of Service (QoS), routing, and partitioning of the fabric devices. 
+  - Multiple SMs can reside on a single network
+  - Can segment a network via _Partition Keys_ (PKeys), very similarly to a VLAN.
+
 - Below is a heavily abstracted diagram detailing some of the above info
 
 <img align="center" src="https://raw.githubusercontent.com/haithcockce/learning-stuff/master/docs/training/media/tcp-vs-rdma.jpg" style="max-width:100%;">
-
 
 - **Note** Be prepared for a _lot_ of initialisms. The userspace and kernelspace implementations of RDMA/IB use the initialisms within their code extensively, so knowing the initialisms helps in reading the code.
 
@@ -56,7 +66,7 @@
 
 <img align="center" src="https://github.com/haithcockce/learning-stuff/blob/master/docs/training/media/queue_pair.png?raw=true" style="max-width:100%;">
 
-- **Note** The above is raw RDMA with basic Infiniband networking. The number of variances on this is quite large and continues to grow as the technology expands.
+- **Note** The above is the most primative aspects of the RDMA/IB communication mechanisms. A lot of additional things are built on top of this, but communications between nodes ultimately fall into some form of the above scheme.
 
 
 ### Application-To-Channel Adapter Communications
@@ -101,7 +111,7 @@ Infiniband hardware is largely developed by Mellanox (recently acquired by NVIDI
   - _Fourteen Data Rate_ (FDR) is 14 Gb/s
   - _Enhanced Data Rate_ (EDR) is 25 Gb/s
   - Link throughput can be ascertained from `lspci`
-- Additional throughputs and widths may exist 
+- Additional throughputs and widths exist 
 - Mellanox releases various series of IB HCAs named "ConnectX"
 
 <img align="center" src="https://raw.githubusercontent.com/haithcockce/learning-stuff/master/docs/training/media/mellanox-adapters.png" style="max-width:100%;">
@@ -122,6 +132,51 @@ As noted above, the software for interacting with IB fabric falls roughly into t
   - `mlx5_core` Low-level hardware and firmware functionality as well as some extended functionality specific to the hardware and firmware (such as initialization after a device reset). Also implements Ethernet functionality, meaning no mlx5 version of mlx4_en.
   - `mlx5_ib` 
 - `mlxfw` Main module enabling flashing firmware on mellanox CAs
+
+#### OS-Mid Layer
+
+- _Communications Manager_ (CM) Provides services needed to allow clients to establish connections
+- _Subnet Administrator Client_ (SA) Provides functionality allowing clients to communication with an SM
+- _Subnet Management Agent_ (SMA) Responds to SM communications enabling the SM to query and configure the devices on each host
+- _Management Datagram Services_ (MAD) Standard messaging format for SM-SMA communications
+- _Perforamce Management Agent_ (PMA) Responds to SM communications (thus MAD packets) to enable hardware performance counter retrieval
+- _Subnet Management Interface_ (SMI) generic interface for client-SM communications, typically QP 0
+- _General Services Interface_ (GSI) generic interface for client-SM or client-client communications, typically QP 1, and often used for SA purposes as well as other device management operations such as IO device management, CM, Performance Management, etc
+
+
+
+# THE REST OF THIS IS UNDER CONSTRUCTION
+
+### Addressing
+
+LIDs
+- Local identifiers, 16 bits
+- Used within a subnet by switch for routing
+- Dynamically assigned at runtime
+  - GUIDs
+- Global Unique Identifier
+- Assigned by vendor (just like a MAC address)
+- 64 EUI-64 IEEE-deﬁned identifiers for elements in a subnet
+  - GIDs
+- Global IDs, 128 bits (same format as IPv6)
+- Used for routing across subnets
+
+GID: routing across subnets
+GID - Global Identifier
+Usage
+- A 128 bit field in the Global Routing Header (GRH) used to route packets between different IB
+subnets
+- Multicast groups port identifier IB & IPOIB
+Structure
+- GUID- 64 bit identifier provided by the manufacturer
+- IPv6 type header
+- Subnet Prefix: A 0 to 64-bit:
+- Identifier used to uniquely identify a set of end-ports which are managed by a common Subnet
+Manager
+
+(lower 64 bits)
+
+
 
 ### Workflow in Program
 
@@ -146,9 +201,12 @@ As noted above, the software for interacting with IB fabric falls roughly into t
 - [iWARP vs. RoCE](https://www.snia.org/sites/default/files/ESF/RoCE-vs.-iWARP-Final.pdf) and a [youtube](https://www.youtube.com/watch?v=nGTY14UptOA) version of the same thing.
 - [Kernel Implementation](https://www.kernel.org/doc/ols/2005/ols2005v2-pages-279-290.pdf) Dated, but relevant kernel implementation
 - [Introduction to Programming Infiniband RDMA [sic]](https://insujang.github.io/2020-02-09/introduction-to-programming-infiniband/)
-[Programmer Sought](https://www.programmersought.com/article/24218148942/)
+- [Programmer Sought](https://www.programmersought.com/article/24218148942/)
 43
-[Verbs Programming Tutorial](https://www.csm.ornl.gov/workshops/openshmem2013/documents/presentations_and_tutorials/Tutorials/Verbs%20programming%20tutorial-final.pdf)
+- [Verbs Programming Tutorial](https://www.csm.ornl.gov/workshops/openshmem2013/documents/presentations_and_tutorials/Tutorials/Verbs%20programming%20tutorial-final.pdf)
 44
-[InfiniBand: An Introduction + Simple IB verbs program with RDMA Write](https://blog.zhaw.ch/icclab/infiniband-an-introduction-simple-ib-verbs-program-with-rdma-write/)
+- [InfiniBand: An Introduction + Simple IB verbs program with RDMA Write](https://blog.zhaw.ch/icclab/infiniband-an-introduction-simple-ib-verbs-program-with-rdma-write/)
 45
+- [OpenSM](https://docs.mellanox.com/display/MLNXOFEDv531001/OpenSM)
+- [Subnet Manager](https://docs.mellanox.com/display/MLNXOSv381000/Subnet+Manager)
+- [HPC Networks: Infiniband](http://people.cs.pitt.edu/~jacklange/teaching/cs1652-f19/lectures/infiniband.pdf)
