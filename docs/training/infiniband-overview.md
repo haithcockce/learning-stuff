@@ -100,6 +100,34 @@ As noted earlier, RDMA allows direct communication with hardware from userspace.
   - Once created, the completion queues and queue pairs need to be assigned to each other and initialized.
 - _Reminder_ The setup actions are performed via the verbs. For most implementations, this is all provided from the `libibverbs` package.
 
+
+
+### Network Organization and Management Overview
+
+#### Addressing
+
+- Addressing in IB is conceptually similar to IP addressing but with different conventions and names
+- _Local Identifiers_ (LID)
+  - 16 bits number used within a subnet by the switch for routing locally within the subnet
+    - If you're familiar with IP Addressing, this is similar to your Private Network Addressing 
+    - IE this is similar to you 192.168.9.*, 172.16.0.*, and 10.0.0.* networks 
+  - Dynamically assigned at runtime
+  - Info is embedded into Local Routing Header part of an IB packet for Link Layer routing 
+- _Global Unique Identifiers_ (GUID)
+  - Similar to a MAC address, they are assigned by vendor
+  - 64 EUI-64 IEEE-deﬁned identifiers for elements in a subnet (such as an end node, port, switch, or multicast group)
+- _Global Identifiers_ (GID)
+  - Modeled after IPv6, 128 bits
+  - The GUID provides the lower 64 bits of the GID
+  - Used for routing across subnets via the Global Routing Header (GRH) in an IB packet for Network Layer routing
+- _Partition Keys_ (PKeys)
+  - Similar to a VLAN, PKeys can group IB ports/nodes all physically connected together into subnetworks that may or may not communicate with each other
+  - PKeys also define levels of membership within partitions, where a "Full" member may communicate with all nodes of the partition while "Limited" can only communicate with Full members
+  - PKeys are 16-bit hex values where the most significant bit defines Full (1) or Limited (0) membership and the remaining 15 bits provide a PKey identifier
+  - IB Ports can be a member of multiple partitions, and the switch will always create a default partition for an entire subnet (`0x7fff` as its ID)
+
+#### Put in stuff about SA and SM and SMA and SMI 
+
 ## Hardware
 
 Infiniband hardware is largely developed by Mellanox (recently acquired by NVIDIA) and Intel (though Intel recently handed it to Cornelis Networks). At the time of writing, no other IB hardware providers exist. 
@@ -126,27 +154,6 @@ Infiniband hardware is largely developed by Mellanox (recently acquired by NVIDI
 
 - Mellanox HCAs have one or more ports 
 
-### Addressing
-
-- Addressing in IB is conceptually similar to IP addressing but with different conventions and names
-- _Local Identifiers_ (LID)
-  - 16 bits number used within a subnet by the switch for routing locally within the subnet
-    - If you're familiar with IP Addressing, this is similar to your Private Network Addressing 
-    - IE this is similar to you 192.168.9.*, 172.16.0.*, and 10.0.0.* networks 
-  - Dynamically assigned at runtime
-  - Info is embedded into Local Routing Header part of an IB packet for Link Layer routing 
-- _Global Unique Identifiers_ (GUID)
-  - Similar to a MAC address, they are assigned by vendor
-  - 64 EUI-64 IEEE-deﬁned identifiers for elements in a subnet (such as an end node, port, switch, or multicast group)
-- _Global Identifiers_ (GID)
-  - Modeled after IPv6, 128 bits
-  - The GUID provides the lower 64 bits of the GID
-  - Used for routing across subnets via the Global Routing Header (GRH) in an IB packet for Network Layer routing
-- _Partition Keys_ (PKeys)
-  - Similar to a VLAN, PKeys can group IB ports/nodes all physically connected together into subnetworks that may or may not communicate with each other
-  - PKeys also define levels of membership within partitions, where a "Full" member may communicate with all nodes of the partition while "Limited" can only communicate with Full members
-  - PKeys are 16-bit hex values where the most significant bit defines Full (1) or Limited (0) membership and the remaining 15 bits provide a PKey identifier
-  - IB Ports can be a member of multiple partitions, and the switch will always create a default partition for an entire subnet (`0x7fff` as its ID)
 
 
 ## IB Layers and Kernel Modules
