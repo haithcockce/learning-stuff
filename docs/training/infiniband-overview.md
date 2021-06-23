@@ -34,6 +34,7 @@
   - An SM applies network traffic related configurations such as Quality of Service (QoS), routing, and partitioning of the fabric devices. 
   - Multiple SMs can reside on a single network
   - Can segment a network via _Partition Keys_ (PKeys), very similarly to a VLAN.
+  - _Subnet Administrator_ the subnet database built by the SM containing records of paths and channel adapter info. Managed and updated by the SM. An SA exists for each SM on the network and clients query the SA for info on paths. 
 
 - Below is a heavily abstracted diagram detailing some of the above info
 
@@ -249,3 +250,4 @@ As noted above, the software for interacting with IB fabric falls roughly into t
 - [OpenSM](https://docs.mellanox.com/display/MLNXOFEDv531001/OpenSM)
 - [Subnet Manager](https://docs.mellanox.com/display/MLNXOSv381000/Subnet+Manager)
 - [HPC Networks: Infiniband](http://people.cs.pitt.edu/~jacklange/teaching/cs1652-f19/lectures/infiniband.pdf)
+- [Infiniband Network Architecture](https://github.com/haithcockce/learning-stuff/blob/master/books/InfiniBand%20Network%20Architecture.pdf)
