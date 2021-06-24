@@ -4,7 +4,7 @@
 
 - [What Is Infiniband And Rdma](#what-is-infiniband-and-rdma)
 - [Communication Overview](#communication-overview)
-- [Node-To-Node Communication](#node-to-node-communication)
+  - [Node To Node Communication](#node-to-node-communication)
 
 ## What Is Infiniband And Rdma
 
@@ -41,7 +41,7 @@
 
 ## Communication Overview
 
-### Node-To-Node Communications
+### Node To Node Communications
 
 - RDMA encapsulates actions to perform some operation (such as sending or receiving data) as a _Work Request_ (WR), where completion of this is referred to as a _completion_.
 - Work Requests are organized into queues generically referred to as _Work Queues_ (WQ);
