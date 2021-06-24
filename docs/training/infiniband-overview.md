@@ -2,10 +2,9 @@
 
 ### Table Of Contents
 
-- <a href='# What?'>What?</a>
 - [What?](#what)
 
-# What
+## What
 
 - _Remote Direct Memory Access_ (or RDMA) is a transport protocol between two or more systems with a focus on High Performance Computing (HPC) environments. In its most basic setup, RDMA offers:
   - Kernel bypass; sending and receiving of data is done similar to simply reading from some area of memory (with a couple more moving parts to facilitate such) exposed directly to the application in question and thus does not require entering kernelspace to perform these operations
