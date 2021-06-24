@@ -5,6 +5,12 @@
 - [What Is Infiniband And Rdma](#what-is-infiniband-and-rdma)
 - [Communication Overview](#communication-overview)
   - [Node To Node Communications](#node-to-node-communications)
+  - [Application To Channel Adapter Communications](#application-to-channel-adapter-communications)
+- [Network Organization and Management Overview](#network-organization-and-management-overview)
+  - [Addressing](#addressing)
+  - [Subnet Management](#subnet-management)
+  - [Communications Management](#communications-management)
+- Everything after this is under construction
 
 ## What Is Infiniband And Rdma
 
@@ -74,7 +80,7 @@
 
 
 
-### Application-To-Channel Adapter Communications
+### Application To Channel Adapter Communications
 
 As noted earlier, RDMA allows direct communication with hardware from userspace. Several entities exist to facilitate direct hardware communication.
 
@@ -99,9 +105,9 @@ As noted earlier, RDMA allows direct communication with hardware from userspace.
 
 
 
-### Network Organization and Management Overview
+## Network Organization and Management Overview
 
-#### Addressing
+### Addressing
 
 - Addressing in IB is conceptually similar to IP addressing but with different conventions and names
 - _Local Identifiers_ (LID)
@@ -123,7 +129,7 @@ As noted earlier, RDMA allows direct communication with hardware from userspace.
   - PKeys are 16-bit hex values where the most significant bit defines Full (1) or Limited (0) membership and the remaining 15 bits provide a PKey identifier
   - IB Ports can be a member of multiple partitions, and the switch will always create a default partition for an entire subnet (`0x7fff` as its ID)
 
-#### Subnet Management
+### Subnet Management
 
 - _Subnet Manager_ (SM) main software to manage a network of IB nodes (like a router on a regular TCP/IP network)
   - Can run on a dedicated IB switch or simply on a system in the network. 
@@ -146,7 +152,7 @@ As noted earlier, RDMA allows direct communication with hardware from userspace.
     - Listed because, like most components of IB, a userspace entity can register a client to monitor and respond to MADs, thus creating a userspace portion, `umad`. 
     - For example, `ibping`, similar to `ping` but performing only at the Link Layer, requires use of umad devices files to communicate 
 
-#### Communications Management
+### Communications Management
 
 - _General Services Manager_ (GSM) a class of managers which communicate over the _General Services Interface_ (GSI, QP1) with _General Services Agents_ (GSA) to perform some actions not associated with subnet management. 
 - _Communications Management_ (CM) is a type of GSM which operates specifically for establishing and maintaining connections between nodes
