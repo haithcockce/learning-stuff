@@ -165,6 +165,10 @@ As noted earlier, RDMA allows direct communication with hardware from userspace.
   - CM is responsible for timing out and retying the above requests if needed
   - CM services can also be brought into userspace via `ib_ucm` should you want to register your own CM
     - [`ibacm`](https://linux.die.net/man/1/ibacm) is an example service in userspace which helps map IB endpoints to names/addresses and caching such info
+- Communication IDs
+  - Instances of connections are tracked via Communication IDs
+  - A communication ID is associated with a QP, the RDMA route (which includes the SA Path Record), an IB device, and an event handler called whenever a communication event happens
+  - Communication IDs operate conceptually similar to a socket in that a socket describes a combination of local IP address to communication over and remote IP address to communicate to. The main conceptual difference is communications can be async and communications must be explicitly bound to an IB device before listening/communication (a socket can be bound via `INADDR_ANY` wherein you do not care about a specific device to listen to and will accept connections over any device)
 
 
 
