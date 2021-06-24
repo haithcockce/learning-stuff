@@ -26,15 +26,6 @@
 
 - _Host Channel Adapter_ (HCA), dedicated hardware which enables the RDMA protocol and operates like a Network Interface Card specialized for RDMA. Often referred to as just Channel Adapter (CA).
 
-- _Subnet Manager_ (SM) main software to manage a network of IB nodes (like a router on a regular TCP/IP network)
-  - Can run on a dedicated IB switch or simply on a system in the network. 
-    - This implies a dedicated IB hardware switch is not necessary to run in an IB network but is often found in larger HPC clusters. 
-    - When running on generic hardware, usually runs via `opensm`. 
-  - An SM discovers and configures all the IB fabric devices to enable traffic flow between those devices.
-  - An SM applies network traffic related configurations such as Quality of Service (QoS), routing, and partitioning of the fabric devices. 
-  - Multiple SMs can reside on a single network
-  - Can segment a network via _Partition Keys_ (PKeys), very similarly to a VLAN.
-  - _Subnet Administrator_ the subnet database built by the SM containing records of paths and channel adapter info. Managed and updated by the SM. An SA exists for each SM on the network and clients query the SA for info on paths. 
 
 - Below is a heavily abstracted diagram detailing some of the above info
 
@@ -126,7 +117,44 @@ As noted earlier, RDMA allows direct communication with hardware from userspace.
   - PKeys are 16-bit hex values where the most significant bit defines Full (1) or Limited (0) membership and the remaining 15 bits provide a PKey identifier
   - IB Ports can be a member of multiple partitions, and the switch will always create a default partition for an entire subnet (`0x7fff` as its ID)
 
-#### Put in stuff about SA and SM and SMA and SMI 
+#### Subnet Management
+
+- _Subnet Manager_ (SM) main software to manage a network of IB nodes (like a router on a regular TCP/IP network)
+  - Can run on a dedicated IB switch or simply on a system in the network. 
+    - This implies a dedicated IB hardware switch is not necessary to run in an IB network but is often found in larger HPC clusters. 
+    - When running on generic hardware, usually runs via `opensm`. 
+  - An SM discovers and configures all the IB fabric devices to enable traffic flow between those devices.
+  - An SM applies network traffic related configurations such as Quality of Service (QoS), routing, and partitioning of the fabric devices. 
+  - Multiple SMs can reside on a single network
+  - Can segment a network via PKeys, very similarly to a VLAN.
+- _Subnet Administrator_ (SA) the subnet database built by the SM containing records of paths and channel adapter info. 
+  - Managed and updated by the SM. 
+  - An SA exists for each SM on the network 
+  - Clients query the SA for info on paths. 
+  - The SM regularly scans the network for changes to the fabric and updates the SA accordingly if a change is found
+- _Subnet Manager Agent_ (SMA) entity built into the IB device which responds to the SM
+  - Main entity which provides IB device info for the SM 
+  - Communicates over the _Subnet Manager Interface_ (SMI), QP0, with SM 
+  - Communicates via Management Datagrams (MAD), a dedicated type of packet used for communicating between Managers and Agents. 
+    - Many types of Managers and Agents exist, such as ones specific to devices, performance and performance counters, and subnet managers. An SMA is an agent specific to SM communications.
+    - Listed because, like most components of IB, a userspace entity can register a client to monitor and respond to MADs, thus creating a userspace portion, `umad`. 
+    - For example, `ibping`, similar to `ping` but performing only at the Link Layer, requires use of umad devices files to communicate 
+
+#### Communications Management
+
+- _General Services Manager_ (GSM) a class of managers which communicate over the _General Services Interface_ (GSI, QP1) with _General Services Agents_ (GSA) to perform some actions not associated with subnet management. 
+- _Communications Management_ (CM) is a type of GSM which operates specifically for establishing and maintaining connections between nodes
+  - The manager that sits on the IB device that the kernel communicates with 
+  - Performs connection establishment as a 3-way handshake (like TCP/IP);
+    - System operates like a server and listens for incoming connections
+    - Clients send a connection request to server
+    - Server will reply with an accept or reject (ACK or NACK in TCP/IP)
+    - Client responds to the accept with a _Ready-To-Use_ (RTU) message 
+  - CM is responsible for timing out and retying the above requests if needed
+  - CM services can also be brought into userspace via `ib_ucm` should you want to register your own CM
+    - [`ibacm`](https://linux.die.net/man/1/ibacm) is an example service in userspace which helps map IB endpoints to names/addresses and caching such info
+
+
 
 ## Hardware
 
@@ -156,6 +184,7 @@ Infiniband hardware is largely developed by Mellanox (recently acquired by NVIDI
 
 
 
+
 ## IB Layers and Kernel Modules
 
 As noted above, the software for interacting with IB fabric falls roughly into three categories, device drivers, mid layer, and ULPs. 
@@ -182,7 +211,6 @@ As noted above, the software for interacting with IB fabric falls roughly into t
 - _Subnet Management Agent_ (SMA) Responds to SM communications enabling the SM to query and configure the devices on each host
 - _Management Datagram Services_ (MAD) Standard messaging format for SM-SMA communications
 - _Perforamce Management Agent_ (PMA) Responds to SM communications (thus MAD packets) to enable hardware performance counter retrieval
-- _Subnet Management Interface_ (SMI) generic interface for client-SM communications, typically QP 0
 - _General Services Interface_ (GSI) generic interface for client-SM or client-client communications, typically QP 1, and often used for SA purposes as well as other device management operations such as IO device management, CM, Performance Management, etc
 
 ##### Modules
@@ -224,19 +252,6 @@ As noted above, the software for interacting with IB fabric falls roughly into t
   - `rdma_destroy_ah` deallocates an address handle
   - Many other functions wrap around the noted functions above (such as `ib_create_ah_from_wc` and `ipoib_create_ah`) but some implement their owen address handler stuff (such as `mlx4_ib_create_ah` which does not call down to `rdma_create_ah`)
 
-
-### Workflow in Program
-
-1. Via the verbs, create an infiniband context
-  - The application must first _register the memory_ which denotes an area of memory within the application as dedicated to RDMA operations.
-  - Upon registering the memory for RDMA communications, the HCA creates a channel from itself to the area of memory.
-2. Once the HCA is opened, the application establishes a connection.
-
-### Kernel Bits
-
-#### Modules
-
-- [Mellanox Linux User Manual](https://www.mellanox.com/related-docs/prod_software/Mellanox_OFED_Linux_User_Manual_v4_3.pdf)
 
 # References
 
