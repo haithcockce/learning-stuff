@@ -2,7 +2,7 @@
 
 ### Table Of Contents
 
-- [What Is Infiniband And Rdma](#what-is-infiniband-and-rdma)
+- [What Is Infiniband And RDMA](#what-is-infiniband-and-rdma)
 - [Communication Overview](#communication-overview)
   - [Node To Node Communications](#node-to-node-communications)
   - [Application To Channel Adapter Communications](#application-to-channel-adapter-communications)
@@ -12,7 +12,7 @@
   - [Communications Management](#communications-management)
 - Everything after this is under construction
 
-## What Is Infiniband And Rdma
+## What Is Infiniband And RDMA
 
 - _Remote Direct Memory Access_ (or RDMA) is a transport protocol between two or more systems with a focus on High Performance Computing (HPC) environments. In its most basic setup, RDMA offers:
   - Kernel bypass; sending and receiving of data is done similar to simply reading from some area of memory (with a couple more moving parts to facilitate such) exposed directly to the application in question and thus does not require entering kernelspace to perform these operations
