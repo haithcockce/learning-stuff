@@ -1,4 +1,11 @@
 # Intro to Infiniband and RDMA
+# TODO 
+- Merge Terminology and Initialisms into sections above but highlight anything not included
+- Flesh-out OS Midlayer Modules section
+- Do ULP 
+- Use the nasty diagram to tie it all together
+- Get rid of kernel resources. Don't really need it rn 
+- Get a few machines and perform some operations to see what's up in perf and what not
 
 ### Table Of Contents
 
@@ -25,19 +32,21 @@
   - IB operates as the L2 or link layer between nodes and any additional infrastructure between RDMA applications (such as the physical network fabric adapters and whatnot)
   - In nearly every scenario, IB fabric adapters can work as IB devices or Ethernet devices for interoperability.
 
-- _Verbs_  an interface for application stacks to use in order to facilitate RDMA and Inifniband communications and setup _channels_
+- _Verbs_  is an interface for application stacks to use in order to facilitate RDMA and Inifniband communications and setup _channels_
   - Conceptually similar to an API, but multiple implementations exist in the world.
   - The userspace portions/interfaces are often referred to as _uverbs_ 
   - Verbs are divided logically into "control path" (manage RDMA/IB resources) and "data path" (using RDMA/IB resources to send/receive data)
-  - At a high level, via the verbs interface, we use the control path/command channel to setup and create our Infiniband resources (such as the noted queues) and use the data path/data channels to send and receive data.
+  - At a high level, via the verbs interface, we use the control path/command channel to setup and create our Infiniband resources (such as the queues noted below) and use the data path/data channels to send and receive data.
 
-- As implied above, Infiniband and RDMA provide a whole new networking stack which can be very specifically tailored to particular HPC setups. As such, the internal bits of Infiniband can be divided somewhat into three somewhat distinct layers:
+- As implied above, Infiniband and RDMA provide a whole new networking stack which can be very specifically tailored to particular HPC setups. 
+  - Below is a sort of comparison between the IB and IP network stacks
+
+<img align="center" src="https://github.com/haithcockce/learning-stuff/blob/master/docs/training/media/ib_layers_colored.png?raw=true" style="max-width:100%;">
+
+- In order to handle userspace/hardware interaction directly while also providing network management, the internal bits of Infiniband can be divided somewhat into three somewhat distinct layers:
   - _Upper Layer Protocols_ (ULP) are application stack-specific protocols and libraries. For example, networked filesystems or networked storage solutions built on top of RDMA/IB would have libraries and operations at this layer.
-  - _Mid-Layer_ or functionality largely arbitrated and initialized by the OS in question to manage the underlying RDMA/IB operations and IB network fabric.
-  - Hardware-specific drivers
-
-- _Host Channel Adapter_ (HCA), dedicated hardware which enables the RDMA protocol and operates like a Network Interface Card specialized for RDMA. Often referred to as just Channel Adapter (CA).
-
+  - _Mid-Layer_ or functionality largely arbitrated and initialized by the OS in question to manage the underlying IB devices and IB network.
+  - Hardware-specific drivers responsible for hardware dependent operations such as device initialization and teardown as well as reading device capabilities.
 
 - Below is a heavily abstracted diagram detailing some of the above info
 
@@ -58,7 +67,8 @@
   - Queueing a Work Queue Entity to either Work Queue is referred to as _posting_
   - Work Queue Entities are differentiated as _Send Request_ (SR) when posted to a Send Queue and _Receive Request_ (RR) when posted to a Receive Queue
 - _Shared Receive Queues_ (SRQ) provides a scalable method of receiving work
-  - Posting Receive Requests is an atomic operation. For heavy ingress traffic, this atomic operation introduces an immediate bottleneck for addressing bursts of ingress activity.
+  - Consuming IB traffic sent to you in order to pass it to the application in question requires posting a Receive Request to the Receive Queue
+  - Posting Receive Requests is an atomic operation. For heavy ingress traffic, this atomic operation introduces an immediate bottleneck when addressing said heavy ingress activity.
   - A Shared Receive Queue maps to 1 or more Queue Pairs (and thus 1 or more Receive Queues)
   - A linked list of Receive Requests can be posted as a single atomic operation to a Shared Receive Queue for multiple Receive Requests to allow for scalability
 - _Work Completions_ are entities of data containing info about the completion of some request
@@ -68,8 +78,9 @@
   - A Receive Request always ends with a Completion Queue Entity
 - During setup of IB structures, a _Local Key_ (L_key) and _Remote Key_ (R_key) are generated for security in accessing memory regions (more on all this in "Application-To-Channel Adapter Communication")
 - Communication types
-  - While IB communication types span reliable-connected, unreliable-connected, reliable-datagram, and unreliable-datagram, most clients only use _unreliable datagrams_ (UD) or _reliable connected_ (RC) modes
-  - UD operates similar to UDP in TCP/IP addressing while RC operates similar to TCP
+  - While IB communication types span reliable-connected, unreliable-connected, reliable-datagram, and unreliable-datagram, most clients only use _unreliable datagrams_ (UD) or _reliable connected_ (RC) modes. More recent hardware uses only UD.
+  - UD operates similar to UDP in TCP/IP addressing; packets are sent by the server node without receiving acknowledgement from the client node.
+  - RC operates similar to TCP; packets are sent by the server node and require an acknowledgement by the client.
   - **Note** [Connected mode is not an option](https://access.redhat.com/solutions/5960861) in some scenarios:
     - ConnectX-4 devices and above has Enhanced IPoIB enabled which forces use of UD mode and can not be disabled
     - RHEL 7 provided a kernel module parameter `ipoib_enhanced` for the module `ib_ipoib` to optionally disable Enhanced IPoIB and allow connected mode, however this was not added upstream meaning RHEL 8 and above can not disable Enhanced IPoIB (and thus are required to use UD mode)
@@ -84,6 +95,7 @@
 
 As noted earlier, RDMA allows direct communication with hardware from userspace. Several entities exist to facilitate direct hardware communication.
 
+- _Host Channel Adapter_ (HCA), dedicated hardware which enables the RDMA protocol and operates like a Network Interface Card specialized for RDMA. Often referred to as just Channel Adapter (CA).
 - Via the verbs interface, create an _Infiniband Context_, a structure which aggregates info about an IB device.
   - Userspace version `ibv_context` aggregates device and device operations
   - Kernelspace version, `ib_ucontext` maintains the kernelspace bits of the context such as what verbs can be associated with the device.
@@ -93,8 +105,8 @@ As noted earlier, RDMA allows direct communication with hardware from userspace.
 - Register a _Memory Region_ (MR), an area of memory designated to perform various operations or use as the buffer to read from or write to another node
   - An MR is an aggregate structure containing pointers to relevant IB contexts, protection domains, the starting address of the region of memory, how large the region is, and L/R_Keys
   - Userspace version `ibv_mr` contains all the above
-  - Kernelspace version `ib_mr` contains all the above, but also includes a possible list of queue pairs and includes some addition things for low-level management stuff (such as what the page size for memory is)
-  - On registering, an L_key and R_key are generated and associated with the memory region
+  - Kernelspace version `ib_mr` contains all the above, but also includes a possible list of queue pairs and includes some additional things for low-level management stuff (such as what the page size for memory is)
+  - On registering, an L_key (local key) and R_key (remote key) are generated and associated with the memory region
     - The L_key enables authenticating access to a memory region on the local system.
     - The R_key can be sent to remote systems and enable authenticating access to a local memory region from the remote system (IE performing an RDMA read/write)
 - Create Send and Receive Completion Queues as well as a Queue Pair (overview thereof can be found in Node-To-Node Communications)
@@ -111,14 +123,14 @@ As noted earlier, RDMA allows direct communication with hardware from userspace.
 
 - Addressing in IB is conceptually similar to IP addressing but with different conventions and names
 - _Local Identifiers_ (LID)
-  - 16 bits number used within a subnet by the switch for routing locally within the subnet
+  - 16-bit number used within a subnet by the switch for routing locally within the subnet
     - If you're familiar with IP Addressing, this is similar to your Private Network Addressing 
-    - IE this is similar to you 192.168.9.*, 172.16.0.*, and 10.0.0.* networks 
+    - IE this is similar to 192.168.9.*, 172.16.0.*, and 10.0.0.* networks 
   - Dynamically assigned at runtime
   - Info is embedded into Local Routing Header part of an IB packet for Link Layer routing 
 - _Global Unique Identifiers_ (GUID)
   - Similar to a MAC address, they are assigned by vendor
-  - 64 EUI-64 IEEE-deﬁned identifiers for elements in a subnet (such as an end node, port, switch, or multicast group)
+  - 64-bit IEEE-deﬁned identifiers for elements in a subnet (such as an end node, port, switch, or multicast group)
 - _Global Identifiers_ (GID)
   - Modeled after IPv6, 128 bits
   - The GUID provides the lower 64 bits of the GID
@@ -147,10 +159,10 @@ As noted earlier, RDMA allows direct communication with hardware from userspace.
 - _Subnet Manager Agent_ (SMA) entity built into the IB device which responds to the SM
   - Main entity which provides IB device info for the SM 
   - Communicates over the _Subnet Manager Interface_ (SMI), QP0, with SM 
-  - Communicates via Management Datagrams (MAD), a dedicated type of packet used for communicating between Managers and Agents. 
+  - Communicates via _Management Datagrams_ (MAD), a dedicated type of packet used for communicating between Managers and Agents. 
     - Many types of Managers and Agents exist, such as ones specific to devices, performance and performance counters, and subnet managers. An SMA is an agent specific to SM communications.
     - Listed because, like most components of IB, a userspace entity can register a client to monitor and respond to MADs, thus creating a userspace portion, `umad`. 
-    - For example, `ibping`, similar to `ping` but performing only at the Link Layer, requires use of umad devices files to communicate 
+    - For example, `ibping`, similar to `ping` but performing only at the Link Layer, requires use of umad device files to communicate 
 
 ### Communications Management
 
@@ -168,7 +180,7 @@ As noted earlier, RDMA allows direct communication with hardware from userspace.
 - Communication IDs
   - Instances of connections are tracked via Communication IDs
   - A communication ID is associated with a QP, the RDMA route (which includes the SA Path Record), an IB device, and an event handler called whenever a communication event happens
-  - Communication IDs operate conceptually similar to a socket in that a socket describes a combination of local IP address to communication over and remote IP address to communicate to. The main conceptual difference is communications can be async and communications must be explicitly bound to an IB device before listening/communication (a socket can be bound via `INADDR_ANY` wherein you do not care about a specific device to listen to and will accept connections over any device)
+  - Communication IDs operate conceptually similar to a socket in that a socket describes a combination of a local IP address to communication over and a remote IP address to communicate to. The main conceptual difference is communications can be asynchronous and communications must be explicitly bound to an IB device before listening/communication (a socket can be bound via `INADDR_ANY` wherein you do not care about a specific device to listen to and will accept connections over any device)
 
 
 
@@ -231,7 +243,7 @@ As noted above, the software for interacting with IB fabric falls roughly into t
 
 ##### Modules
 
-- `ib_core` core verbs modules
+- `ib_core` core verbs module
 - `ib_cm` IB-specific connection management 
 - `rdma_cm` RDMA-specific connection management
 - `ib_sa` IB subnet administration helpers
