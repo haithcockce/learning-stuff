@@ -21,3 +21,36 @@
   - 8: pending
   - 9-11: tail index (index * 2 + 1 = queue entry)
   - 12-31: tail cpu
+
+```c
+static inline __pure u32 encode_tail(int cpu, int idx)
+{
+	u32 tail;
+
+	tail  = (cpu + 1) << _Q_TAIL_CPU_OFFSET;
+	tail |= idx << _Q_TAIL_IDX_OFFSET; /* assume < 4 */
+
+	return tail;
+}
+
+static inline __pure struct mcs_spinlock *decode_tail(u32 tail)
+{
+	int cpu = (tail >> _Q_TAIL_CPU_OFFSET) - 1;
+	int idx = (tail &  _Q_TAIL_IDX_MASK) >> _Q_TAIL_IDX_OFFSET;
+
+	return per_cpu_ptr(&qnodes[idx].mcs, cpu);
+}
+```
+
+
+`include/asm-generic/qspinlock_types.h`
+`kernel/locking/qspinlock.c`
+
+static inline __pure struct mcs_spinlock *decode_tail(u32 tail)
+{
+        int cpu = (tail >> _Q_TAIL_CPU_OFFSET) - 1;
+        int idx = (tail &  _Q_TAIL_IDX_MASK) >> _Q_TAIL_IDX_OFFSET;
+
+        return per_cpu_ptr(&qnodes[idx].mcs, cpu);
+}
+
