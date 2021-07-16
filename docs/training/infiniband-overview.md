@@ -1,10 +1,6 @@
 # Intro to Infiniband and RDMA
-# TODO 
-- Merge Terminology and Initialisms into sections above but highlight anything not included
-- Flesh-out OS Midlayer Modules section
-- Do ULP 
-- Use the nasty diagram to tie it all together
-- Get rid of kernel resources. Don't really need it rn 
+# TODO
+- Get rid of kernel resources. Don't really need it rn
 - Get a few machines and perform some operations to see what's up in perf and what not
 
 ### Table Of Contents
@@ -34,11 +30,11 @@
 
 - _Verbs_  is an interface for application stacks to use in order to facilitate RDMA and Inifniband communications and setup _channels_
   - Conceptually similar to an API, but multiple implementations exist in the world.
-  - The userspace portions/interfaces are often referred to as _uverbs_ 
+  - The userspace portions/interfaces are often referred to as _uverbs_
   - Verbs are divided logically into "control path" (manage RDMA/IB resources) and "data path" (using RDMA/IB resources to send/receive data)
   - At a high level, via the verbs interface, we use the control path/command channel to setup and create our Infiniband resources (such as the queues noted below) and use the data path/data channels to send and receive data.
 
-- As implied above, Infiniband and RDMA provide a whole new networking stack which can be very specifically tailored to particular HPC setups. 
+- As implied above, Infiniband and RDMA provide a whole new networking stack which can be very specifically tailored to particular HPC setups.
   - Below is a sort of comparison between the IB and IP network stacks
 
 <img align="center" src="https://github.com/haithcockce/learning-stuff/blob/master/docs/training/media/ib_layers_colored.png?raw=true" style="max-width:100%;">
@@ -89,6 +85,12 @@
 
 - **Note** The above is the most primative aspects of the RDMA/IB communication mechanisms. A lot of additional things are built on top of this, but communications between nodes ultimately fall into some form of the above scheme.
 
+- For managing the network topography and node communications, IB devices often have a number of services and agents/clients which interact with said services built into the device itself.
+  - The services range from general network layout management, establishing and maintaining node-to-node communications, monitoring performance on devices and so on.
+  - The IB devices, for the most part, arbitrate the services and agents, while other software in the OS and/or in userpspace use these capabilities to perform communications between nodes and the like.
+    - You can think of this as futexes in the kernel; the kernel arbitrates futexes, however, the application using the futexes needs to manage proper use thereof.
+    - You can also think of this as the kernel providing the means for two applications to communicate to each other over NICs via IP Addressing and ports and the like. The applications in question, however, must interact with these facilities in order to actually communicate over the NICs.
+
 
 
 ### Application To Channel Adapter Communications
@@ -124,10 +126,10 @@ As noted earlier, RDMA allows direct communication with hardware from userspace.
 - Addressing in IB is conceptually similar to IP addressing but with different conventions and names
 - _Local Identifiers_ (LID)
   - 16-bit number used within a subnet by the switch for routing locally within the subnet
-    - If you're familiar with IP Addressing, this is similar to your Private Network Addressing 
-    - IE this is similar to 192.168.9.*, 172.16.0.*, and 10.0.0.* networks 
+    - If you're familiar with IP Addressing, this is similar to your Private Network Addressing
+    - IE this is similar to 192.168.9.*, 172.16.0.*, and 10.0.0.* networks
   - Dynamically assigned at runtime
-  - Info is embedded into Local Routing Header part of an IB packet for Link Layer routing 
+  - Info is embedded into Local Routing Header part of an IB packet for Link Layer routing
 - _Global Unique Identifiers_ (GUID)
   - Similar to a MAC address, they are assigned by vendor
   - 64-bit IEEE-deﬁned identifiers for elements in a subnet (such as an end node, port, switch, or multicast group)
@@ -143,37 +145,39 @@ As noted earlier, RDMA allows direct communication with hardware from userspace.
 
 ### Subnet Management
 
+- _General Services Manager_ (GSM) a class of managers which communicate over the _General Services Interface_ (GSI, QP1) with _General Services Agents_ (GSA) to perform some actions not associated with subnet management.
+- _Management Datagrams_ (MAD) a dedicated type of packet used for communicating between Managers and Agents.
+  - Listed because, like most components of IB, a userspace entity can register a client to monitor and respond to MADs, thus creating a userspace portion, `umad`.
+  - For example, `ibping`, similar to `ping` but performing only at the Link Layer, requires use of umad device files to communicate
 - _Subnet Manager_ (SM) main software to manage a network of IB nodes (like a router on a regular TCP/IP network)
-  - Can run on a dedicated IB switch or simply on a system in the network. 
-    - This implies a dedicated IB hardware switch is not necessary to run in an IB network but is often found in larger HPC clusters. 
-    - When running on generic hardware, usually runs via `opensm`. 
+  - Can run on a dedicated IB switch or simply as an application on a system in the network.
+    - This implies a dedicated IB hardware switch is not necessary to run in an IB network but is often found in larger HPC clusters.
+    - When running as an application on generic hardware, usually runs via `opensm`.
   - An SM discovers and configures all the IB fabric devices to enable traffic flow between those devices.
-  - An SM applies network traffic related configurations such as Quality of Service (QoS), routing, and partitioning of the fabric devices. 
+  - An SM applies network traffic related configurations such as Quality of Service (QoS), routing, and partitioning of the fabric devices.
   - Multiple SMs can reside on a single network
   - Can segment a network via PKeys, very similarly to a VLAN.
-- _Subnet Administrator_ (SA) the subnet database built by the SM containing records of paths and channel adapter info. 
-  - Managed and updated by the SM. 
-  - An SA exists for each SM on the network 
-  - Clients query the SA for info on paths. 
+  - _Subnet Manager Agent_ (SMA) entity built into the IB device which responds to the SM
+    - Main entity which provides IB device info for the SM
+    - Communicates over the _Subnet Manager Interface_ (SMI), QP0, with SM
+    - Communicates via MADs
+- _Subnet Administrator_ (SA) the subnet database built by the SM containing records of paths and channel adapter info.
+  - Managed and updated by the SM.
+  - An SA exists for each SM on the network
+  - Clients query the SA for info on paths.
   - The SM regularly scans the network for changes to the fabric and updates the SA accordingly if a change is found
-- _Subnet Manager Agent_ (SMA) entity built into the IB device which responds to the SM
-  - Main entity which provides IB device info for the SM 
-  - Communicates over the _Subnet Manager Interface_ (SMI), QP0, with SM 
-  - Communicates via _Management Datagrams_ (MAD), a dedicated type of packet used for communicating between Managers and Agents. 
-    - Many types of Managers and Agents exist, such as ones specific to devices, performance and performance counters, and subnet managers. An SMA is an agent specific to SM communications.
-    - Listed because, like most components of IB, a userspace entity can register a client to monitor and respond to MADs, thus creating a userspace portion, `umad`. 
-    - For example, `ibping`, similar to `ping` but performing only at the Link Layer, requires use of umad device files to communicate 
+  - _Subnet Administrator Client_ enables SA communications via MADs
+- _Performance Manager_ maintains hardware performance counters. Queried via the _Perforamce Management Agent_ (PMA). The PMA Responds to SM communications (thus MAD packets) to enable hardware performance counter retrieval.
 
 ### Communications Management
 
-- _General Services Manager_ (GSM) a class of managers which communicate over the _General Services Interface_ (GSI, QP1) with _General Services Agents_ (GSA) to perform some actions not associated with subnet management. 
-- _Communications Management_ (CM) is a type of GSM which operates specifically for establishing and maintaining connections between nodes
-  - The manager that sits on the IB device that the kernel communicates with 
+- _Communications Manager_ (CM) is a type of GSM which operates specifically for establishing and maintaining connections between nodes
+  - The manager that sits on the IB device that the kernel communicates with
   - Performs connection establishment as a 3-way handshake (like TCP/IP);
     - System operates like a server and listens for incoming connections
     - Clients send a connection request to server
     - Server will reply with an accept or reject (ACK or NACK in TCP/IP)
-    - Client responds to the accept with a _Ready-To-Use_ (RTU) message 
+    - Client responds to the accept with a _Ready-To-Use_ (RTU) message
   - CM is responsible for timing out and retying the above requests if needed
   - CM services can also be brought into userspace via `ib_ucm` should you want to register your own CM
     - [`ibacm`](https://linux.die.net/man/1/ibacm) is an example service in userspace which helps map IB endpoints to names/addresses and caching such info
@@ -186,7 +190,7 @@ As noted earlier, RDMA allows direct communication with hardware from userspace.
 
 ## Hardware
 
-Infiniband hardware is largely developed by Mellanox (recently acquired by NVIDIA) and Intel (though Intel recently handed it to Cornelis Networks). At the time of writing, no other IB hardware providers exist. 
+Infiniband hardware is largely developed by Mellanox (recently acquired by NVIDIA) and Intel (though Intel recently handed it to Cornelis Networks). At the time of writing, no other IB hardware providers exist.
 
 ### Mellanox
 
@@ -203,24 +207,24 @@ Infiniband hardware is largely developed by Mellanox (recently acquired by NVIDI
   - _Fourteen Data Rate_ (FDR) is 14 Gb/s
   - _Enhanced Data Rate_ (EDR) is 25 Gb/s
   - Link throughput can be ascertained from `lspci`
-- Additional throughputs and widths exist 
+- Additional throughputs and widths exist
 - Mellanox releases various series of IB HCAs named "ConnectX"
 
 <img align="center" src="https://raw.githubusercontent.com/haithcockce/learning-stuff/master/docs/training/media/mellanox-adapters.png" style="max-width:100%;">
 
-- Mellanox HCAs have one or more ports 
+- Mellanox HCAs have one or more ports
 
 
 
 
 ## IB Layers and Kernel Modules
 
-As noted above, the software for interacting with IB fabric falls roughly into three categories, device drivers, mid layer, and ULPs. 
+As noted above, the software for interacting with IB fabric falls roughly into three categories, device drivers, mid layer, and ULPs.
 
 #### Device Drivers
 
 - `mlx4` main low-level drivers for ConnectX-3 family of cards. Functionality is split into the following modules;
-  - `mlx4_core` low-level hardware and firmware functionality such as device initialization, firmware command processing, and resource allocation to enable IB and Ethernet interoperability 
+  - `mlx4_core` low-level hardware and firmware functionality such as device initialization, firmware command processing, and resource allocation to enable IB and Ethernet interoperability
   - `mlx4_ib` IB-specific functionality of device and connects IB-specific parts of mid-layer to IB functionality of hardware. Technically part of the OS Mid-Layer.
   - `mlx4_en` Ethernet-specific functionality of the card and connects TCP/IP networking mid-layer to ethernet functionality of hardware. Technically part of the OS Mid-Layer.
 - `mlx5` main low-level drivers for ConnectX-4 family of cards and above. Functionality is split into the following modules:
@@ -232,53 +236,49 @@ As noted above, the software for interacting with IB fabric falls roughly into t
 
 #### OS-Mid Layer
 
-##### Terminology and Initialisms
-
-- _Communications Manager_ (CM) Provides services needed to allow clients to establish connections
-- _Subnet Administrator Client_ (SA) Provides functionality allowing clients to communication with an SM
-- _Subnet Management Agent_ (SMA) Responds to SM communications enabling the SM to query and configure the devices on each host
-- _Management Datagram Services_ (MAD) Standard messaging format for SM-SMA communications
-- _Perforamce Management Agent_ (PMA) Responds to SM communications (thus MAD packets) to enable hardware performance counter retrieval
-- _General Services Interface_ (GSI) generic interface for client-SM or client-client communications, typically QP 1, and often used for SA purposes as well as other device management operations such as IO device management, CM, Performance Management, etc
-
 ##### Modules
 
-- `ib_core` core verbs module
-- `ib_cm` IB-specific connection management 
-- `rdma_cm` RDMA-specific connection management
+- `ib_core` core IB module providing functionality around core IB activity, such as function callback when an IB event occurs, device registration and enumeration, client registration to respond to IB activity, etc.
+- `ib_cm` and `rdma_cm` Connection management, such as CM IDs; creating, maintaining, and destroying communications with other nodes; querying GID and LID info, etc
 - `ib_sa` IB subnet administration helpers
-- `ib_mad` IB subnet administration helper dealing with MADs
-- `ib_umad` IB subnet administration helper dealing with MADs from userspace
+- `ib_mad` Functionality do manage MADs and offer kernelspace hooks for custom agents/services to respond to MADs
+- `ib_umad` Functionality dealing with enabling MAD management from userspace
+
+##### Services
+
+**Note** Pretty much all the OS-Mid Layer functions are described in [Network Organization and Management Overview](#network-organization-and-management-overview)
+
+- Subnet Manager Agent (SMA)
+- Subnet Administrator (SA) Client
+- Management Datagram (MAD) handlers
+- Communication Manager (CA) and its agent (CMA)
+- _iWARP_ a networking protocol that implements RDMA for efficient data transfer over IP networks
+  - Not an acronym (for some reason)
+  - Still utilizes full TCP/IP stack while applications implement RDMA protocols
+  - Essentially, RDMA activity is encapsulated into packets with TCP and Ethernet headers for network transport.
+  - iWARP extensions to TCP/IP eliminates TCP/IP stack processing (as its offloaded to RDMA-enabled NIC), zero-copy like regular IB, and can post data from userspace directly to NIC like IB
+  - Requires dedicated hardware on nodes, but switches do not need dedicated hardware as the traffic is still encapsulated within Ethernet/TCP headers wherein flow control and congestion management is done with existing Ethernet/TCP portions of switches
+- _RDMA over Converged Ethernet_ (RoCE)
+  - RDMA but over pure Ethernet (v1) or pure UDP and Ethernet (v2)
+  - No TCP flow control/congestion management (because it uses UDP instead of TCP)
+
+<img align="center" src="https://raw.githubusercontent.com/haithcockce/learning-stuff/master/docs/training/media/roce_vs_iwarp.png" style="max-width:100%;">
 
 #### ULP
 
+- _Internet Protocol over Infiniband_ (IPoIB) almost the reverse of iWARP/RoCE, IP protocol data and such gets encapsulated into IB packets and set through IB fabric
+- _Sockets Direct Protocol_ (SDP) RDMA-accelerated alternative to the TCP protocol on IP. The goal is to do this in a manner which is transparent to the application.
+  - _Note_ uses `SOCK_STREAM` so can be used for basic unix sockets like a pipe or as a TCP/IP replacement
+- _SCSI RDMA Protocol_ (SRP) allows direct access from one node to another node's SCSI devices via RDMA
+- _iSCSI Extensions for RDMA_ (iSER) extensions to the iSCSI protocol to enable transport via RDMA.
+  - These still are provided over TCP or iWARP and use existing Ethernet devices and fabric.
+  - Despite going through TCP/IP layers, data is still transferred directly into/out of SCSI buffers (zero copy) and with little CPU intervention
+- _Reliable Datagram Sockets_ (RDS) connectionless and record-oriented protocol over IB and RoCE.
+  - RDS is a generic and transport-independent protocol
+  - Currently can perform RDS over IB only, though RDS over TCP should be enabled in the future
+- _Network Filesystem over RDMA_ (NFSoRDMA) as the name implies, NFS over RDMA and currently requires RoCE
 
-
-#### Kernel Implementation 
-
-- Core software is logically grouped into 5 major areas, HCA Resource Management, Memory Management, Commection Management, Work Request and Completion Event Processing, and Subnet Administration.
-- Please note many seemingly duplicate functions exist which start with `ib_*` and `rdma_*`; a lot of the `rdma_*` functions obfuscate some of the pointer management and programmatic steps for you but often perform the same functionality.
-
-##### Resource Management
-
-- _IB Client_ 
-  - An entity that uses IB resources (and in particular the IB devices) must register as an _IB client_ via `ib_register_client`
-  - Its parameter, `ib_client`, must contain call backs which fire when IB devices are added or removed from the system 
-  - When an IB client is completely done, IE going through tear down or termination, the client calls `ib_unregister_client`
-- Query and Modify Info 
-  - `ib_query_device` allows an IB client to retrieve attributes for a hardware device such as hardware capabilities and limitations (E.G. max size for queue pairs)
-  - `ib_query_port` gathers port-specific info for an IB hardware device such as MTU, port state, its LID, and the SM's LID
-  - `ib_query_pkey` gathers PKey info for the port
-  - `ib_modify_device` and `ib_modify_port` changes some device or port-specific info such as indicating presence of a connection manager. Typically not used by any ULPs but could be used by Mid-Layer stuff.
-- PDs
-  - As noted above, PDs provide access control by associating IB resources such as QPs and MRs within a single domain of trust, and the client which allocates the PD can grant access to the PD to other nodes on the fabric in order to send and receive via the QPs contained within.
-  - `ib_alloc_pd` and `ib_dealloc_pd` allocates and deallocates a PD respectively
-- Address Handles
-  - Similar to TCP/IP, the IB stack needs address handles to organize and reference local and remote node info to send and receive packets to/from
-  - `rdma_create_ah` creates a address handle 
-  - `rdma_modify_ah` and `rdma_query_ah` can change or query info about an address handle
-  - `rdma_destroy_ah` deallocates an address handle
-  - Many other functions wrap around the noted functions above (such as `ib_create_ah_from_wc` and `ipoib_create_ah`) but some implement their owen address handler stuff (such as `mlx4_ib_create_ah` which does not call down to `rdma_create_ah`)
+<img align="center" src="https://raw.githubusercontent.com/haithcockce/learning-stuff/master/docs/training/media/ib_diagram.png" style="max-width:100%;">
 
 
 # References
