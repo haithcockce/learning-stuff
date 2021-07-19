@@ -1,7 +1,7 @@
 # Intro to Infiniband and RDMA
 # TODO
-- Get rid of kernel resources. Don't really need it rn
 - Get a few machines and perform some operations to see what's up in perf and what not
+- Troubleshooting steps. Get loberman's feedback
 
 ### Table Of Contents
 
