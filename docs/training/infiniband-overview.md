@@ -2,6 +2,7 @@
 # TODO
 - Get a few machines and perform some operations to see what's up in perf and what not
 - Troubleshooting steps. Get loberman's feedback
+- Add omnipath and `hfi1` module or whatever to hardware section
 
 ### Table Of Contents
 
@@ -13,7 +14,15 @@
   - [Addressing](#addressing)
   - [Subnet Management](#subnet-management)
   - [Communications Management](#communications-management)
-- Everything after this is under construction
+- [Hardware](#hardware)
+  - [Mellanox](#mellanox)
+    - [Hardware Details](#hardware-details)
+- [IB Layers and Kernel Modules](#ib-layers-and-kernel-modules)
+  - [Device Drivers](#device-drivers)
+  - [OS Mid Layer](#os-mid-layer)
+    - [Modules](#modules)
+    - [Services](#services)
+  - [ULP](#ulp)
 
 ## What Is Infiniband And RDMA
 
@@ -232,9 +241,7 @@ As noted above, the software for interacting with IB fabric falls roughly into t
   - `mlx5_ib` Similar to `mlx4_ib` provides IB-specific functionality of device and connects IB-specific parts of mid-layer to IB functionality of hardware. Technically part of the OS Mid-Layer.
 - `mlxfw` Main module enabling flashing firmware on mellanox CAs
 
-# THE REST OF THIS IS UNDER CONSTRUCTION
-
-#### OS-Mid Layer
+#### OS Mid Layer
 
 ##### Modules
 
