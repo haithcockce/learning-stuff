@@ -1,8 +1,5 @@
 # Intro to Infiniband and RDMA
-# TODO
-- Get a few machines and perform some operations to see what's up in perf and what not
-- Troubleshooting steps. Get loberman's feedback
-- Add omnipath and `hfi1` module or whatever to hardware section
+
 
 ### Table Of Contents
 
@@ -23,6 +20,7 @@
     - [Modules](#modules)
     - [Services](#services)
   - [ULP](#ulp)
+- [Introductory Troubleshooting](#introductory-troubleshooting)
 
 ## What Is Infiniband And RDMA
 
@@ -287,6 +285,226 @@ As noted above, the software for interacting with IB fabric falls roughly into t
 
 <img align="center" src="https://raw.githubusercontent.com/haithcockce/learning-stuff/master/docs/training/media/ib_diagram.png" style="max-width:100%;">
 
+## Introductory Troubleshooting
+
+#### Checking for our modules
+
+- Infiniband and RDMA modules are shipped with the kernel, thus in-box/in-house modules. 
+- Mellanox ships modules with a different slightly different path name. 
+- Check the sosreport's `modinfo` (`sos_commands/kernel/modinfo_[...]`) for the file name and path. Mellanox modules nearly always have 'OFED' or 'OFA' in the path/file names while our modules do not. _Note_ the signer for the modules will depend on who provided the modules. 
+- Example `modinfo` output for in-house modules:
+
+  ```bash
+  [root@localhost ~]# modinfo ib_core
+  filename: /lib/modules/3.10.0-693.el7.x86_64/kernel/drivers/infiniband/core/ib_core.ko
+  license: Dual BSD/GPL
+  description: core kernel InfiniBand API
+  author: Roland Dreier
+  rhelversion: 7.4
+  srcversion: 2B35581D5A8815FA8684260
+  depends:
+  intree: Y
+  vermagic: 3.10.0-693.el7.x86_64 SMP mod_unload modversions
+  signer: Red Hat Enterprise Linux kernel signing key
+  sig_key: 4F:FD:D6:3C:93:7E:B4:A7:A1:14:BC:5E:89:1A:CB:DE:50:20:65:21
+  sig_hashalgo: sha256
+  parm: send_queue_size:Size of send queue in number of work requests (int)
+  parm: recv_queue_size:Size of receive queue in number of work requests (int)
+  parm: force_mr:Force usage of MRs for RDMA READ/WRITE operations (bool)
+  ```
+
+- Example output of OFED modules:
+
+  ```bash
+  [root@localhost ~]# modinfo ib_core
+  filename: /lib/modules/3.10.0-693.el7.x86_64/extra/mlnx-ofa_kernel/drivers/infiniband/core/ib_core.ko
+  license: Dual BSD/GPL
+  description: core kernel InfiniBand API
+  author: Roland Dreier
+  rhelversion: 7.4
+  srcversion: 88498DC1AE00B29161E536C
+  depends: mlx_compat
+  vermagic: 3.10.0-693.el7.x86_64 SMP mod_unload modversions
+  signer: Hewlett-Packard Company: HP UEFI Secure Boot 2013 DB key
+  sig_key: 1D:7C:F2:C2:B9:26:73:F6:9C:8E:E1:EC:70:63:96:7A:B9:B6:2B:EC
+  sig_hashalgo: sha256
+  parm: send_queue_size:Size of send queue in number of work requests (int)
+  parm: recv_queue_size:Size of receive queue in number of work requests (int)
+  parm: roce_v1_noncompat_gid:Default GID auto configuration (Default: yes) (bool)
+  parm: force_mr:Force usage of MRs for RDMA READ/WRITE operations (bool)
+  ```
+
+#### Overview of `infiniband-diags` and other tools
+
+- `infiniband-diags(8)` provides a myriad of tools to troubleshoot CA and the fabric:
+
+  ```
+  # Binaries, * are found in sosreports
+  /usr/sbin/check_lft_balance.pl
+  /usr/sbin/dump_fts
+  /usr/sbin/dump_lfts.sh
+  /usr/sbin/dump_mfts.sh
+  /usr/sbin/ibaddr
+  /usr/sbin/ibcacheedit
+  /usr/sbin/ibccconfig
+  /usr/sbin/ibccquery
+  /usr/sbin/ibfindnodesusing.pl
+  /usr/sbin/ibhosts
+  /usr/sbin/ibidsverify.pl
+  /usr/sbin/iblinkinfo     *
+  /usr/sbin/ibnetdiscover
+  /usr/sbin/ibnodes
+  /usr/sbin/ibping
+  /usr/sbin/ibportstate    *
+  /usr/sbin/ibqueryerrors
+  /usr/sbin/ibroute
+  /usr/sbin/ibrouters
+  /usr/sbin/ibstat         *
+  /usr/sbin/ibstatus       *
+  /usr/sbin/ibswitches
+  /usr/sbin/ibsysstat
+  /usr/sbin/ibtracert
+  /usr/sbin/perfquery      *
+  /usr/sbin/saquery
+  /usr/sbin/sminfo
+  /usr/sbin/smpdump
+  /usr/sbin/smpquery
+  /usr/sbin/vendstat
+  ```
+
+- Performance metrics can also be measured with binaries from the `perftest` package:
+
+  ```
+  /usr/bin/ib_atomic_bw
+  /usr/bin/ib_atomic_lat
+  /usr/bin/ib_read_bw
+  /usr/bin/ib_read_lat
+  /usr/bin/ib_send_bw
+  /usr/bin/ib_send_lat
+  /usr/bin/ib_write_bw
+  /usr/bin/ib_write_lat
+  /usr/bin/raw_ethernet_bw
+  /usr/bin/raw_ethernet_lat
+  ```
+
+- The `qperf` tool also allows for RDMA latency and throughput testing;
+  - [How to use qperf to measure network bandwidth and latency performance?](https://access.redhat.com/solutions/2122681)
+
+#### Testing connectivity, link state, and rates
+
+- `ibstatus` provides the status of the ports on the IB CA
+
+  ```
+  [root@ibclient ~]# ibstatus
+  Infiniband device 'mlx5_0' port 1 status:
+    default gid:	 fe80:0000:0000:0000:dead:beef:dead:0001
+    base lid:	 0x3
+    sm lid:		 0x3
+    state:		 4: ACTIVE
+    phys state:	 5: LinkUp  # Indicates a physical connection (Similar to "lower-up"); could be to switch or another node
+    rate:		 100 Gb/sec (4X EDR)  # Speed is 100Gbit/sec (4 x EDR @25Gbit/s)
+    link_layer:	 InfiniBand
+
+  Infiniband device 'mlx5_1' port 1 status:
+    default gid:	 fe80:0000:0000:0000:dead:beef:dead:0002
+    base lid:	 0x1
+    sm lid:		 0x1
+    state:		 4: ACTIVE
+    phys state:	 5: LinkUp
+    rate:		 100 Gb/sec (4X EDR)
+    link_layer:	 InfiniBand
+  ```
+
+- `ibnodes` provides fabric topology. In this example, we have two nodes connected to each other without a switch:
+
+  ```
+  [root@ibclient ~]# ibnodes
+  Ca	: 0xdeadbeefdead0101 ports 1 "ibserver mlx5_0"
+  Ca	: 0xdeadbeefdead0001 ports 1 "ibclient mlx5_0"
+  ```
+
+- `ibstat` provides the full configuration for the client and its IB CA ports:
+
+  ```
+  [root@ibclient ~]# ibstat
+  CA 'mlx5_0'
+    CA type: MT4115  **** Mellanox HCA
+    Number of ports: 1
+    Firmware version: 12.21.2010
+    Hardware version: 0
+    Node GUID: 0xdeadbeefdead0001
+    System image GUID: 0xdeadbeefdead0001
+    Port 1:
+      State: Active
+      Physical state: LinkUp
+      Rate: 100
+      Base lid: 3
+      LMC: 0
+      SM lid: 3
+      Capability mask: 0x2651e84a
+      Port GUID: 0xdeadbeefdead0001
+      Link layer: InfiniBand
+  CA 'mlx5_1'
+    CA type: MT4115
+    Number of ports: 1
+    Firmware version: 12.21.2010
+    Hardware version: 0
+    Node GUID: 0xdeadbeefdead0002
+    System image GUID: 0xdeadbeefdead0001
+    Port 1:
+      State: Active
+      Physical state: LinkUp
+      Rate: 100
+      Base lid: 1
+      LMC: 0
+      SM lid: 1
+      Capability mask: 0x2651e84a
+      Port GUID: 0xdeadbeefdead0002
+      Link layer: InfiniBand
+  ```
+
+- `ibping` provides a `ping`-like command to test basic connectivity
+  - Requires running both on a client in client mode and server in server mode
+  - _Reminder_ This tests IB connectivity, thus tools like `tcpdump` will not collect any packets with `ibping`
+
+  ```
+  root@ibserver ~]# ibping -S
+
+  [root@ibclient ~]# ibping -G 0xdeadbeefdead0101  # The hex value is a GUID of the one of the server ports
+  Pong from <server> (Lid 4): time 0.445 ms
+  Pong from <server> (Lid 4): time 0.441 ms
+  Pong from <server> (Lid 4): time 0.437 ms
+  ```
+  
+- `ibdiagui` provides a GUI for `ibdiagnet`
+
+#### Storage-specific Troubleshooting
+
+- `ib_srp` (SCSI RDMA Protocol)
+  - Requires storage array that supports `ib_srp` targets
+  - Requires the client be setup to connect to the array after first having the SM active
+- Starting the `srp_daemon`
+
+  ```bash
+  [root@ibclient ~]# cat start_srp.sh 
+  run_srp_daemon  -V -f /etc/ddn/srp_daemon.conf -R 30 -T 10 -t 7000 -ance -i mlx5_0 -p 1 1>/root/srp1.log 2>&1 &
+  run_srp_daemon  -V -f /etc/ddn/srp_daemon.conf -R 30 -T 10 -t 7000 -ance -i mlx5_1 -p 1 1>/root/srp2.log 2>&1 &
+  ```
+
+- `iser` (ISCSI Extensions for RDMA)
+  - Requires an IP address to a server supporting ISCSI targets over RDMA
+
+- Start the probe for LUNS
+
+  ```bash
+  #!/bin/bash
+  ifconfig ib0 192.168.1.2 netmask 255.255.255.0 up
+  ifconfig ib1 192.168.2.2 netmask 255.255.255.0 up
+  iscsiadm -m discovery -t st -p 192.168.1.1:3260   **** Server IP
+  iscsiadm -m discovery -t st -p 192.168.2.1:3260   **** Server IP
+  iscsiadm -m node -T iqn.some.long.iqnname.with.a.lot.of.characters -o update -n iface.transport_name -v iser
+  iscsiadm -m node -l
+  ```
 
 # References
 
