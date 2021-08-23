@@ -511,6 +511,7 @@ if __name__ == '__main__':
 - The linux kernel allows inserting probes dynamically without rewriting/recompiling the kernel in select spots. 
 - These dynamic tracepoints/probes do not have associated actions with them like the static tracepoints do (probing `sched:sched_switch` gets the previous and next tasks for example). To get data from them, you will need to pass in options to another `perf record` command.
 - Once a probe point is inserted, then it becomes an event you can monitor on (`perf record -g -e probe:my_cool_probe` for example)
+- **Note** _The remainder of this section requires the debuginfo kernel installed._
 
 - `perf probe --line <FUNC or FILE>`
   - Lists points in the function or source code where probes can be inserted
