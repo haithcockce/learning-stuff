@@ -3,6 +3,7 @@
 - Get a few machines and perform some operations to see what's up in perf and what not
 - Troubleshooting steps. Get loberman's feedback
 - Add omnipath and `hfi1` module or whatever to hardware section
+- Add ib address examples
 
 ### Table Of Contents
 
