@@ -111,6 +111,7 @@
 #### Key points with strace
 
 - Some key points in the kinds of data collected with the recommended strace options;
+  - Strace provides data about which calls are taken to enter kernelspace along with their parameters and return values. As such, you will likely need to search for the definitions of the functions and what the parameters represent as well as their return values. 
   - Strace still can not trace functions taken exclusively in userspace or kernelspace. However, the timestamps can provide insight into how long a syscall took to execute to completion _and_ the time spent in userspace (or off the CPU) between executions of syscalls.
     - In the second example, the time spent between syscalls can be calculated by adding the start time in the third column to the time to completion in the last column. Then calculating the delta between that sum and the start time of the next syscall execution start time.
     - For example, the time between the end of the `execve` syscall and the beginning of the `brk` syscall is `14:21:22.304990 - (14:21:22.304481 + 0.000350) = 0.000159` or 159 microseconds. The 159us could have been spent in userspace, could include an interrupt for the kernel to do something, etc.
@@ -119,13 +120,32 @@
     - Another example could include noting a child thread begins to hang within a syscall and never returns. Alternatively, a child thread could continue execution in userspace and never call another syscall until termination.
   - **Note** Strace provides data only for the syscalls taken. Even though application behavior can be inferred from the syscalls taken, _this tells you nothing of the expected behavior_. As such, if an strace is taken of a third party application, at most, Red Hat can comment on the strace output and make evidenced assumptions on observed behavior. _The application vendor is the only one responsible for noting anything about expected behavior_.
 
-## Example Of Strace In Cases
+## Exercises
+
+#### My application is hanging! 
+
+- A customer notes their application is hanging. While this is largely still in the territory of the application vendor needing to dig in, we can, at minimum, gather an strace to determine if the application is indeed very clearly hanging in any particular spot. 
+- **Note** _If this is the only information you have, inform the customer that we are extremely unlikely to be able to determine where the hang is if we do not ship the application. The strace will ultimately need to be reviewed by the application vendor and the customer must understand we can not guarantee any strong degree of confidence in any conclusions drawn from the strace until the vendor has reviewed the strace output or identified where the hang is occurring._
+- The customer provides [some strace data](https://raw.githubusercontent.com/haithcockce/learning-stuff/master/docs/training/data/strace/example1.trace) and confirmed the trace was captured at the time of the hang.
+
+##### Assignment
+
+- Review the trace and provide elaboration on what is observed.
+  - Where is the hang occurring if at all? 
+  - How could the kernel/OS be implecated?
+
+#### My application is hanging on the `poll()` function!
+
+- A customer notes their application is hanging and believes the application to be hanging on a call to the `poll()` function. They note the call to `poll()` is looking for input to the file being polled but does not know what file is being polled. 
+- The customer provides [some strace data](https://raw.githubusercontent.com/haithcockce/learning-stuff/master/docs/training/data/strace/example2.trace) and confirmed the trace was captured at the time of the hang.
+
+##### Assignment
+
+- Review the trace and provide elaboration on what is observed.
+  - Where is the hang occurring if at all? 
+  - How could the kernel/OS be implecated?
 
 #### My application hangs/is slow
-
-- Loops within userspace and taking no syscalls
-
-- loops within userspace and takes syscalls (select)
 
 - A specific syscall takes more time (find nsss/sssd case if possible)
 
