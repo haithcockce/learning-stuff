@@ -1,0 +1,51 @@
+238789 15:33:30.616659 restart_syscall(<... resuming interrupted nanosleep ...>) = 0 <3.169149>
+238789 15:33:33.786258 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.501133>
+238789 15:33:34.288118 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500779>
+238789 15:33:34.789209 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500867>
+238789 15:33:35.290418 nanosleep({tv_sec=10, tv_nsec=0}, 0x7ffedf76db30) = 0 <10.000489>
+238789 15:33:45.291142 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500944>
+238789 15:33:45.792603 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500946>
+238789 15:33:46.293914 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500906>
+238789 15:33:46.795184 nanosleep({tv_sec=10, tv_nsec=0}, 0x7ffedf76db30) = 0 <10.000443>
+238789 15:33:56.796169 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500804>
+238789 15:33:57.298202 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500951>
+238789 15:33:57.799812 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.501021>
+238789 15:33:58.301398 nanosleep({tv_sec=10, tv_nsec=0}, 0x7ffedf76db30) = 0 <10.000500>
+238789 15:34:08.302179 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500941>
+238789 15:34:08.803802 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500949>
+238789 15:34:09.305646 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.501045>
+238789 15:34:09.807203 nanosleep({tv_sec=10, tv_nsec=0}, 0x7ffedf76db30) = 0 <10.000490>
+238789 15:34:19.808204 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500912>
+238789 15:34:20.310828 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500943>
+238789 15:34:20.812284 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500820>
+238789 15:34:21.313836 nanosleep({tv_sec=10, tv_nsec=0}, 0x7ffedf76db30) = 0 <10.000491>
+238789 15:34:31.314869 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500953>
+238789 15:34:31.816600 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500933>
+238789 15:34:32.318181 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500909>
+238789 15:34:32.819861 nanosleep({tv_sec=10, tv_nsec=0}, 0x7ffedf76db30) = 0 <10.000580>
+238789 15:34:42.820898 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500740>
+238789 15:34:43.322154 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500908>
+238789 15:34:43.823796 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500932>
+238789 15:34:44.325638 nanosleep({tv_sec=10, tv_nsec=0}, 0x7ffedf76db30) = 0 <10.000642>
+238789 15:34:54.326922 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500968>
+238789 15:34:54.828564 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500732>
+238789 15:34:55.329951 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500803>
+238789 15:34:55.831259 nanosleep({tv_sec=10, tv_nsec=0}, 0x7ffedf76db30) = 0 <10.000497>
+238789 15:35:05.832288 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500921>
+238789 15:35:06.333910 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500833>
+238789 15:35:06.835254 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500961>
+238789 15:35:07.336944 nanosleep({tv_sec=10, tv_nsec=0}, 0x7ffedf76db30) = 0 <10.000489>
+238789 15:35:17.337979 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500957>
+238789 15:35:17.839631 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500984>
+238789 15:35:18.341229 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500958>
+238789 15:35:18.842952 nanosleep({tv_sec=10, tv_nsec=0}, 0x7ffedf76db30) = 0 <10.000354>
+238789 15:35:28.843507 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500949>
+238789 15:35:29.344688 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500964>
+238789 15:35:29.845931 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500919>
+238789 15:35:30.347075 nanosleep({tv_sec=10, tv_nsec=0}, 0x7ffedf76db30) = 0 <10.000321>
+238789 15:35:40.347582 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500956>
+238789 15:35:40.848771 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500959>
+238789 15:35:41.350012 poll([{fd=0</dev/pts/1<char 136:1>>, events=POLLIN}], 1, 500) = 0 (Timeout) <0.500904>
+238789 15:35:41.851150 nanosleep({tv_sec=10, tv_nsec=0}, {tv_sec=7, tv_nsec=849244193}) = ? ERESTART_RESTARTBLOCK (Interrupted by signal) <2.150827>
+238789 15:35:44.002091 --- SIGINT {si_signo=SIGINT, si_code=SI_KERNEL} ---
+238789 15:35:44.002261 +++ killed by SIGINT +++
