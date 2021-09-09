@@ -6,6 +6,7 @@
   - [Strace](#strace)
 - [Common Use](#common-use)
   - [Key points with strace](#key-points-with-strace)
+- [Exercises](#exercises)
 
 ## What Is Strace
 
@@ -132,7 +133,7 @@
 
 - Review the trace and provide elaboration on what is observed.
   - Where is the hang occurring if at all? 
-  - How could the kernel/OS be implecated?
+  - How could the kernel/OS be implicated?
 
 #### My application is hanging on the `poll()` function!
 
@@ -142,11 +143,30 @@
 ##### Assignment
 
 - Review the trace and provide elaboration on what is observed.
-  - Where is the hang occurring if at all? 
-  - How could the kernel/OS be implecated?
+- Where is the hang occurring if at all? 
+- How could the kernel/OS be implicated?
 
-#### My application hangs/is slow
+#### My application is running slower!
 
-- A specific syscall takes more time (find nsss/sssd case if possible)
+- A customer notes their application is running a little slower on one system compared to the other. 
+- Sosreports show both systems have the same exact build but not all configurations are exactly the same.
+- SAR and similar tooling shows little difference in the two other than slightly elevated CPU usage in general for the slower system. 
+- The customer provides strace from [the slow system](https://raw.githubusercontent.com/haithcockce/learning-stuff/master/docs/training/data/strace/example3-slow.trace) and from [the fast system](https://raw.githubusercontent.com/haithcockce/learning-stuff/master/docs/training/data/strace/example3-fast.trace)
 
-- Nearly all syscalls take more time (lower cpu speed manually)
+##### Assignment 
+
+- Review the trace and provide elaboration on what is observed.
+- What command is being traced? Provide the full command line for this.
+- Is anything slower at all? If so, what is or is not slower? Is this in userspace, kernelspace, or both/neither?
+
+#### But for real, my application really is hanging on `poll()`!
+
+- A customer notes their application is hanging on `poll()` and provides rough but solid evidence supporting this claim. 
+- The customer provides [some strace data](https://raw.githubusercontent.com/haithcockce/learning-stuff/master/docs/training/data/strace/example4.trace).
+
+##### Assignment
+
+- Review the trace and provide elaboration on what is observed.
+- Where is the hang occurring if at all? 
+- What are the events leading up to the hang?
+- How is the kernel/OS implecated?
