@@ -1,4 +1,4 @@
-[zoneinfo]
+[meminfo]
 header = yes
 repeat_header = 30
 unitinfo = no
