@@ -24,7 +24,10 @@
   - Some slab caches exist for generic purposes where the objects are a set size (64 bytes, 1kb, etc) and sometimes are referred to as _unamed_ or _generic_ slab caches
 - The lists of slabs in a slab cache are managed based on how full the list is (specifics are slab-/slub-specific)
 - Slabs are kept to a per-numa node bases for locality optimizations
-- The above is generic and applies to both slab and slub conceptually. The specific details, however, differ quite a bit. For example, the figure above includes 'free', 'partial', and 'full' but I did not mention such. Slub does not manage the same lists noted while slab does.
+- The above is generic and applies to both slab and slub conceptually. The specific details, however, differ quite a bit. 
+  - For example, the figure above includes 'free', 'partial', and 'full' but I did not mention such. 
+  - SLAB manages each individual list where "free" is a list of fully free slabs, "full" are slabs with no space for more allocated objects, and "partial" contain some allocated objects and some free space for new obejcts. 
+  - Slub does not manage the same lists; SLUB keeps a pointer to the next free spot on a slab ("freelist pointer") and place newly allocated objects there. When a slab is full, it will literally just forget the slab. When an object is to be freed from a full slab, some complex trickery occurs with the pages of memory making up the slab where the object is freed from where the slab is then kept track of again. 
 - _Note the difference in the confusing terminology_:
   - A slab is the chunk of contiguous memory kernel objects reside in
   - Slab cache is the named/generic slab lists
