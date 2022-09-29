@@ -254,7 +254,7 @@ pmrep :vmstat -t 30s
 <p>pmrep produces output similar to the vmstat tool (<code>:vmstat</code>). The
   data is sampled every 30 seconds (<code>-t 30s</code>).</p>
 <pre>
-pmrep :sar-u-ALL-P-ALL -t 1m -z -a 20200629.00.10 -S '10:00:00'
+pmrep :sar-u-ALL-P-ALL -t 1m -z -a 20200629.00.10 -S @10:00:00
 </pre>
 <p>CPU usage is presented for all CPUs similar to SAR (
   <code>:sar-u-ALL-P-ALL</code>), averaged over a 1 minute interval (<code>-t 1m
@@ -316,7 +316,7 @@ PID for pmlogger: 18738
           <li>Processes and Context Switches Per Second</li>
           <ul><li><code>pmrep :sar-w</code></li></ul>
           <li>Swap activity</li>
-          <ul><li><code>pmrep :sar-w</code></li></ul>
+          <ul><li><code>pmrep :sar-S</code></li></ul>
           <li>Page scan and reclaim activity</li>
           <ul>
             <li><code>pmrep :sar-B-old-kernel</code> for RHEL 7</li>
