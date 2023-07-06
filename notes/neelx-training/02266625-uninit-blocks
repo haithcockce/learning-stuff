@@ -6,14 +6,11 @@ TASK 891991451
       Looks as if a module, likely built for the 3.10.0-123 kernel was forced in
       despite warnings of conflicting symbols.
 
-      KERNEL: /cores/retrace/repos/kernel/x86_64/usr/lib/debug/lib/modules/3.10.0-862.9.1.el7.x86_64/vmlinux
-    DUMPFILE: /cores/retrace/tasks/891991451/crash/vmcore  [PARTIAL DUMP]
         CPUS: 24
         DATE: Thu Nov 15 03:51:01 2018
       UPTIME: 10 days, 17:38:44
 LOAD AVERAGE: 0.35, 0.35, 0.37
        TASKS: 902
-    NODENAME: bi-prd-edw.esb.com
      RELEASE: 3.10.0-862.9.1.el7.x86_64
      VERSION: #1 SMP Wed Jun 27 04:30:39 EDT 2018
      MACHINE: x86_64  (2294 Mhz)
@@ -27,10 +24,6 @@ LOAD AVERAGE: 0.35, 0.35, 0.37
 
 crash> sys -i
         DMI_BIOS_VENDOR: Cisco Systems, Inc.
-       DMI_BIOS_VERSION: B200M4.3.1.3i.0.032120171710
-          DMI_BIOS_DATE: 03/21/2017
-         DMI_SYS_VENDOR: Cisco Systems Inc
-       DMI_PRODUCT_NAME: UCSB-B200-M4
 
 crash> p tainted_mask
 tainted_mask = $1 = 0x3000
@@ -75,7 +68,6 @@ key missing - tainting kernel
 [927599.990160] kernel BUG at mm/page_alloc.c:1450!
 [927599.990211] invalid opcode: 0000 [#1] SMP
 - - - - - - - - - - - - [SNIP] - - - - - - - - - - - -
-[927599.991226] Hardware name: Cisco Systems Inc UCSB-B200-M4/UCSB-B200-M4, BIOS B200M4.3.1.3i.0.032120171710 03/21/2017
 [927599.991270] task: ffff9243c7e44f10 ti: ffff9243bb3f4000 task.ti: ffff9243bb3f4000
 [927599.991294] RIP: 0010:[<ffffffff9759a07e>]  [<ffffffff9759a07e>] move_freepages+0x15e/0x160
 [927599.992069] RSP: 0018:ffff9243bb3f7af8  EFLAGS: 00010087
