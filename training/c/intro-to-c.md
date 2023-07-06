@@ -187,9 +187,9 @@ checking if something is finished, etc).
    - Casting a decimal number (like `float` or `double`) to a whole number type (like `int` or `long`) will drop the decimal and nothing more if the new type can represent the the value.
    - For most other casts (such as `int` to `char` or similar), the most significant (left-most) bits are dropped and the least significant (right-most) bits are kept in the conversion.
 
-# LEAST/MOST SIGNIFICANT BIT
-
-# CRUNCH
+## Least/Most Significant Bit
+- Within binary, the "first" or "last" bit in a value is dependent on the architecture. For `x86` architectures, this is known as little endian where the right most bit is the least significant while the left most is most significant; e.g. in `1000` for `x86`, the `1` is at the right most and is the most significant bit while `0001` for `x86` means the `1` is in the least significant bit.
+- This is important to note as some architectures use big endian where this is reversed. In IBM's POWER 7 and POWER 8 BE, the architectures are big endian, e.g. `1000` the `1` is the least significant bit. 
 
 ## Pointers And Memory
 
