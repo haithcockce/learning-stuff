@@ -26,16 +26,16 @@ make[1]: Leaving directory '/home/chaithco/source/rhel7/redhat'
 2. `rhpkg clone kernel`
 3. `cd kernel/` This directory will have _only_ a README file however `git tag` should show kernel versions
 4. `git checkout -b private-chaithco-sfdc<CASE NO>-<RELEASE> kernel-<VERSION>` for example: 
-  - `git checkout -b private-chaithco-sfdc02061301-rhel-7.4 kernel-3.10.0-693.11.6.el7`
+  - `git checkout -b private-chaithco-sfdcCASENOHERE-rhel-7.4 kernel-3.10.0-693.11.6.el7`
   - `sfdc<CASE NO>` can also be `bz<BZ NUMBER>`
-5. Put the patch in the build directory: `cp ~/source/rhel7/redhat/linux-kernel-test.patch ~/source/testkernels/02061301/rhel7/kernel`
+5. Put the patch in the build directory: `cp ~/source/rhel7/redhat/linux-kernel-test.patch ~/source/testkernels/CASENOHERE/rhel7/kernel`
 
 #### Setting up the kernel rpm 
 
 1. In `kernel.spec`, include the build id to be the case or bz number. For example: 
 
 ```
-%define buildid .02061301
+%define buildid .CASENOHERE
 ```
 
 2. Add the following to the description section: 
@@ -72,7 +72,7 @@ debugging.
 
 1. `git add linux-kernel-test.patch kernel.spec`
 2. `git commit -m 'perf: Fix a race between ring_buffer_detach() and ring_buffer_wakeup()'`
-3. `git push -u origin private-chaithco-sfdc02061301-rhel-7.4`
+3. `git push -u origin private-chaithco-sfdcCASENOHERE-rhel-7.4`
 4. `brew list-targets | less` will list all the targets. They don't always match between distros...
 5. `rhpkg scratch-build --target rhel-7.4-z-test --arches x86_64 noarch`
 
