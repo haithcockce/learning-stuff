@@ -126,6 +126,8 @@ pmrep :sar-u-ALL-P-ALL -t 1m -z -a 20200629.00.10 -S '10:00:00'
 
 ### SAR-Like Analysis
 
+**Note** that each of the pmrep views are simply a collection of metrics pmrep attempts to retrieve from the archive and, sometimes, will perform mathematic operations on those metric values in order to present the values in a digestible way. If the metric does not exist, pmrep will fail! More on this in "Common Issues" below. 
+
 - CPU usage
   - `pmrep :sar-u-ALL-P-ALL`
   - `pmrep :sar-u-ALL`
@@ -173,8 +175,15 @@ pmrep :sar-u-ALL-P-ALL -t 1m -z -a 20200629.00.10 -S '10:00:00'
      r7 # pcp -a /var/log/pcp/pmlogger/r7/20190208.09.30 dmcache
     Error: not all required metrics are available
     Missing: ['dmcache.cache.used', ... , 'dmcache.write_misses']
+
+    $ pmrep :sar-q -z -a 20230823.12.26.0
+    Invalid metric proc.runq.runnable (PM_ERR_NAME Unknown metric name).
+    $ pmrep :sar -z -a 20230823.12.26.0
+    Invalid metric kernel.cpu.util.user (PM_ERR_BADDERIVE Derived metric definition failed).
   ```  
-  - The above error typically indicates the tool, pmrep view, etc needs a specific metric that is not collected in the archive. The archive can be checked it truly lacks to metrics in question with `pminfo` or `pmdumplog`.
+  - The above error typically indicates the tool, pmrep view, etc needs a specific metric that is not collected in the archive. The archive can be checked it truly lacks to metrics in question with `pminfo` or `pmdumplog`. E.g. the following archive is missing the `proc.runq.runnable` metric:
+    ```$ pminfo -a 20230823.12.26.0 | grep proc.runq.runnable -c
+       0```
 - The output is missing values across several different tools. Check the PMCD and pmlogger logs. Example logs:
   ```
   $ less var/log/pcp/pmlogger/<HOSTNAME>/pmlogger.log
