@@ -182,8 +182,10 @@ pmrep :sar-u-ALL-P-ALL -t 1m -z -a 20200629.00.10 -S '10:00:00'
     Invalid metric kernel.cpu.util.user (PM_ERR_BADDERIVE Derived metric definition failed).
   ```  
   - The above error typically indicates the tool, pmrep view, etc needs a specific metric that is not collected in the archive. The archive can be checked it truly lacks to metrics in question with `pminfo` or `pmdumplog`. E.g. the following archive is missing the `proc.runq.runnable` metric:
-    ```$ pminfo -a 20230823.12.26.0 | grep proc.runq.runnable -c
-       0```
+    ```
+    $ pminfo -a 20230823.12.26.0 | grep proc.runq.runnable -c
+    0
+    ```
 - The output is missing values across several different tools. Check the PMCD and pmlogger logs. Example logs:
   ```
   $ less var/log/pcp/pmlogger/<HOSTNAME>/pmlogger.log
